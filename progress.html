@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Face Match Scan Progress</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0f1115;
+    --card: #171a21;
+    --border: #2a2f3a;
+    --text: #e6e8eb;
+    --muted: #9aa3b2;
+    --accent: #4f8cff;
+    --green: #3ecf8e;
+    --red: #ff6b6b;
+    --yellow: #f5c451;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 24px;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .stat .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat .value { font-size: 26px; font-weight: 600; margin-top: 4px; }
+  .stat.matched .value { color: var(--green); }
+  .stat.rejected .value { color: var(--muted); }
+  .stat.errored .value { color: var(--red); }
+  .bar-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .bar-track {
+    background: #23272f;
+    border-radius: 6px;
+    height: 18px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .bar-fill {
+    background: linear-gradient(90deg, var(--accent), var(--green));
+    height: 100%;
+    width: 0%;
+    transition: width 0.4s ease;
+  }
+  .bar-label { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+  .current-source {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12.5px;
+    color: var(--text);
+    background: #0b0d11;
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-top: 10px;
+    word-break: break-all;
+    max-height: 3.2em;
+    overflow: hidden;
+  }
+  .phase-badge {
+    display: inline-block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #23272f;
+    color: var(--yellow);
+    margin-left: 8px;
+  }
+  .matches-title { font-size: 15px; margin: 24px 0 10px; color: var(--text); }
+  .matches {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+  .match-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+  }
+  .match-card img {
+    width: 64px; height: 64px; object-fit: cover; border-radius: 6px; flex-shrink: 0;
+    background: #0b0d11;
+  }
+  .match-meta { min-width: 0; }
+  .match-meta .name { font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .match-meta .conf { font-size: 12px; color: var(--green); }
+  .match-meta .src { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .empty { color: var(--muted); font-size: 13px; }
+  .error-banner {
+    background: #3a1f1f; border: 1px solid #5c2c2c; color: #ffb3b3;
+    padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; display: none;
+  }
+</style>
+</head>
+<body>
+  <h1>Face Match Scan <span id="phase-badge" class="phase-badge">loading</span></h1>
+  <div class="sub">Reads progress.json every 2s. Leave this tab open in the background.</div>
+  <div id="error-banner" class="error-banner">Could not reach progress.json - is the scan running?</div>
+
+  <div class="bar-wrap">
+    <div class="bar-label">
+      <span id="bar-text">0 / 0 processed</span>
+      <span id="rate-text">-- files/min</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill" id="bar-fill"></div></div>
+  </div>
+
+  <div class="grid">
+    <div class="stat"><div class="label">Discovered</div><div class="value" id="stat-discovered">0</div></div>
+    <div class="stat"><div class="label">Processed</div><div class="value" id="stat-processed">0</div></div>
+    <div class="stat matched"><div class="label">Matched</div><div class="value" id="stat-matched">0</div></div>
+    <div class="stat rejected"><div class="label">Rejected</div><div class="value" id="stat-rejected">0</div></div>
+    <div class="stat errored"><div class="label">Errored</div><div class="value" id="stat-errored">0</div></div>
+    <div class="stat"><div class="label">Elapsed</div><div class="value" id="stat-elapsed">0s</div></div>
+  </div>
+
+  <div class="bar-wrap">
+    <div class="label" style="color:var(--muted); font-size:12px; text-transform:uppercase;">Current source</div>
+    <div class="current-source" id="current-source">-</div>
+  </div>
+
+  <div class="matches-title">Recent matches</div>
+  <div class="matches" id="matches-list"><div class="empty">No matches yet.</div></div>
+
+<script>
+function fmtElapsed(sec) {
+  sec = Math.round(sec);
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (h > 0) return `${h}h ${m}m ${s}s`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+async function refresh() {
+  try {
+    const res = await fetch('progress.json?_=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('bad status');
+    const data = await res.json();
+    document.getElementById('error-banner').style.display = 'none';
+
+    const badge = document.getElementById('phase-badge');
+    badge.textContent = data.phase;
+
+    document.getElementById('stat-discovered').textContent = data.total_discovered;
+    document.getElementById('stat-processed').textContent = data.processed;
+    document.getElementById('stat-matched').textContent = data.matched;
+    document.getElementById('stat-rejected').textContent = data.rejected;
+    document.getElementById('stat-errored').textContent = data.errored;
+    document.getElementById('stat-elapsed').textContent = fmtElapsed(data.elapsed_seconds);
+    document.getElementById('rate-text').textContent = `${data.rate_per_min} files/min`;
+    document.getElementById('current-source').textContent = data.current_source || '-';
+
+    const pct = data.total_known && data.total_discovered > 0
+      ? Math.min(100, (data.processed / data.total_discovered) * 100)
+      : (data.total_discovered > 0 ? Math.min(100, (data.processed / data.total_discovered) * 100) : 0);
+    document.getElementById('bar-fill').style.width = pct + '%';
+    const totalLabel = data.total_known ? data.total_discovered : `${data.total_discovered}+ (still enumerating)`;
+    document.getElementById('bar-text').textContent = `${data.processed} / ${totalLabel} processed`;
+
+    const list = document.getElementById('matches-list');
+    if (!data.recent_matches || data.recent_matches.length === 0) {
+      list.innerHTML = '<div class="empty">No matches yet.</div>';
+    } else {
+      list.innerHTML = data.recent_matches.map(m => `
+        <div class="match-card">
+          <img src="${m.thumb || ''}" onerror="this.style.visibility='hidden'">
+          <div class="match-meta">
+            <div class="name">${m.name}</div>
+            <div class="conf">${(m.confidence * 100).toFixed(1)}% ${m.type === 'video' ? '(video)' : ''}</div>
+            <div class="src" title="${m.source}">${m.source}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+  } catch (e) {
+    document.getElementById('error-banner').style.display = 'block';
+  }
+}
+
+refresh();
+setInterval(refresh, 2000);
+</script>
+</body>
+</html>

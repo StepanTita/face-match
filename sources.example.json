@@ -1,0 +1,8 @@
+{
+  "drive_root": "/path/to/your/archive",
+  "sources": [
+    "/path/to/your/photos.zip",
+    "/path/to/your/photos_folder",
+    "/path/to/your/archive/Camera Roll"
+  ]
+}
