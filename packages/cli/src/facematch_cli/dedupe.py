@@ -1,12 +1,13 @@
-"""Deduplicate matched/ results: the same real-world photo commonly exists
-multiple times across overlapping backup sources (iCloud Photos, Google
-Photos Takeout, Photos/, Archive.zip likely all mirror the same phone
-library under different filenames), so the scan naturally re-matches it once
-per source copy.
+"""`facematch dedupe` - find duplicate files in matched/ and move all but one copy aside.
 
-Safe to run WHILE scan.py is still writing into matched/ - read-only with
-respect to matches.csv and checkpoint.sqlite3 (the running scan's state);
-only ever *moves* files within matched/, never deletes.
+The same real-world photo commonly exists multiple times across overlapping
+backup sources (iCloud Photos, Google Photos Takeout, Photos/, Archive.zip
+likely all mirror the same phone library under different filenames), so a
+scan naturally re-matches it once per source copy.
+
+Safe to run WHILE `facematch find` is still writing into matched/ -
+read-only with respect to matches.csv and checkpoint.sqlite3 (the running
+scan's state); only ever *moves* files within matched/, never deletes.
 
 Two-tier detection:
   1. SHA256 exact byte match - cheap, catches identical copies.
@@ -16,15 +17,12 @@ Two-tier detection:
      Photos vs iCloud compression). Videos use SHA256 only (see below).
 
 Incremental/idempotent: a small JSON index (dedupe_state.json) remembers
-every file this script has ever classified. A previously-established
+every file this command has ever classified. A previously-established
 canonical is NEVER moved or replaced by a later, higher-confidence match -
 group formation happens once, when a SECOND file is first found to collide
 with an existing lone file; every subsequent collision just adds another
 duplicate to that same group. This means re-running never reshuffles a
 decision already recorded in dedupe_report.csv.
-
-Usage:
-    uv run dedupe.py [--phash-threshold 5] [--mtime-safety-seconds 5]
 """
 from __future__ import annotations
 
@@ -33,20 +31,13 @@ import csv
 import hashlib
 import json
 import shutil
-import sys
 import time
 from pathlib import Path
+from textwrap import dedent
 
-sys.path.insert(0, str(Path(__file__).parent / "src"))
-from facematch.core import decode_image_path  # noqa: E402
+from facematch_core.decode import decode_image_path
 
-PROJECT_DIR = Path(__file__).parent
-MATCHED_DIR = PROJECT_DIR / "matched"
-THUMBS_DIR = MATCHED_DIR / "video_thumbnails"
-DUPLICATES_DIR = MATCHED_DIR / "duplicates"
-MATCHES_CSV = MATCHED_DIR / "matches.csv"
-STATE_PATH = PROJECT_DIR / "dedupe_state.json"
-REPORT_PATH = PROJECT_DIR / "dedupe_report.csv"
+from . import paths
 
 IMAGE_EXTS_FOR_PHASH = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".bmp", ".tiff", ".tif", ".webp"}
 
@@ -87,12 +78,12 @@ def phash_file(path: Path):
     return imagehash.phash(pil_img)
 
 
-def load_matches_csv() -> dict[str, dict]:
+def load_matches_csv(matches_csv: Path) -> dict[str, dict]:
     """basename(detail/dest_path) -> {confidence, source} for status=matched rows."""
     out = {}
-    if not MATCHES_CSV.exists():
+    if not matches_csv.exists():
         return out
-    with open(MATCHES_CSV, newline="") as f:
+    with open(matches_csv, newline="") as f:
         for row in csv.DictReader(f):
             if row.get("status") != "matched":
                 continue
@@ -108,24 +99,24 @@ def load_matches_csv() -> dict[str, dict]:
     return out
 
 
-def load_state() -> dict:
-    if STATE_PATH.exists():
-        return json.loads(STATE_PATH.read_text())
+def load_state(state_path: Path) -> dict:
+    if state_path.exists():
+        return json.loads(state_path.read_text())
     return {"files": {}, "next_group_id": 1}
 
 
-def save_state(state: dict):
-    tmp = STATE_PATH.with_suffix(".json.tmp")
+def save_state(state_path: Path, state: dict):
+    tmp = state_path.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(state, indent=2))
-    tmp.replace(STATE_PATH)
+    tmp.replace(state_path)
 
 
-def snapshot_candidates(safety_seconds: int) -> list[tuple[str, Path, str]]:
+def snapshot_candidates(matched_dir: Path, thumbs_dir: Path, safety_seconds: int) -> list[tuple[str, Path, str]]:
     """Returns list of (relkey, abspath, kind) for files currently safe to
     consider, where relkey is a stable identifier used as the state dict key."""
     now = time.time()
     out = []
-    for root, kind, glob_pat in [(MATCHED_DIR, "image", "*"), (THUMBS_DIR, "video_thumb", "*.jpg")]:
+    for root, kind, glob_pat in [(matched_dir, "image", "*"), (thumbs_dir, "video_thumb", "*.jpg")]:
         if not root.exists():
             continue
         for p in sorted(root.glob(glob_pat)):
@@ -133,7 +124,7 @@ def snapshot_candidates(safety_seconds: int) -> list[tuple[str, Path, str]]:
                 continue
             if p.parent != root:
                 continue  # don't descend into duplicates/ or other subfolders
-            if root is MATCHED_DIR and p.name == "matches.csv":
+            if root is matched_dir and p.name == "matches.csv":
                 continue
             try:
                 st = p.stat()
@@ -180,8 +171,8 @@ def pick_canonical(a_key: str, a_entry: dict, b_key: str, b_entry: dict) -> tupl
     return (a_key, b_key) if sa >= sb else (b_key, a_key)
 
 
-def move_to_group(entry: dict, path_lookup: dict[str, Path], group_id: str):
-    group_dir = DUPLICATES_DIR / group_id
+def move_to_group(entry: dict, path_lookup: dict[str, Path], group_id: str, duplicates_dir: Path):
+    group_dir = duplicates_dir / group_id
     group_dir.mkdir(parents=True, exist_ok=True)
     src_path = path_lookup[entry["_key"]]
     dest = group_dir / src_path.name
@@ -191,18 +182,46 @@ def move_to_group(entry: dict, path_lookup: dict[str, Path], group_id: str):
     entry["moved_to"] = str(dest)
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--phash-threshold", type=int, default=DEFAULT_PHASH_THRESHOLD)
-    parser.add_argument("--mtime-safety-seconds", type=int, default=DEFAULT_MTIME_SAFETY_SECONDS)
-    args = parser.parse_args()
+def add_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.formatter_class = argparse.RawDescriptionHelpFormatter
+    parser.description = "Find duplicate files already in matched/ and move all but one copy aside."
+    parser.epilog = dedent("""\
+        examples:
+          facematch dedupe                        use the default thresholds
+          facematch dedupe --phash-threshold 8    treat more visually-similar images as duplicates
 
-    DUPLICATES_DIR.mkdir(parents=True, exist_ok=True)
-    match_info = load_matches_csv()
-    state = load_state()
+        safe to run repeatedly, and safe to run while `facematch find` is still
+        writing into matched/ - it never deletes anything, only moves duplicates
+        into matched/duplicates/<group>/, and never revisits a file it already
+        classified.
+        """)
+    parser.add_argument(
+        "--phash-threshold", type=int, default=DEFAULT_PHASH_THRESHOLD,
+        help=f"Max perceptual-hash Hamming distance to treat two images as the same photo "
+             f"(default: {DEFAULT_PHASH_THRESHOLD}; higher catches more near-duplicates but "
+             "risks merging two genuinely different photos).",
+    )
+    parser.add_argument(
+        "--mtime-safety-seconds", type=int, default=DEFAULT_MTIME_SAFETY_SECONDS,
+        help=f"Skip files modified more recently than this many seconds (default: "
+             f"{DEFAULT_MTIME_SAFETY_SECONDS}) - they may still be mid-write by a concurrently running `find`.",
+    )
+
+
+def run(args: argparse.Namespace) -> None:
+    matched_dir = paths.matched_dir()
+    thumbs_dir = paths.thumbs_dir()
+    duplicates_dir = paths.duplicates_dir()
+    matches_csv_path = paths.matches_csv()
+    state_path = paths.dedupe_state_path()
+    report_path = paths.dedupe_report_path()
+
+    duplicates_dir.mkdir(parents=True, exist_ok=True)
+    match_info = load_matches_csv(matches_csv_path)
+    state = load_state(state_path)
     files_state = state["files"]
 
-    candidates = snapshot_candidates(args.mtime_safety_seconds)
+    candidates = snapshot_candidates(matched_dir, thumbs_dir, args.mtime_safety_seconds)
     path_lookup = {relkey: path for relkey, path, _kind in candidates}
 
     new_keys = [relkey for relkey, _p, _k in candidates if relkey not in files_state]
@@ -272,7 +291,7 @@ def main():
         if other_entry.get("group_id"):
             # Existing group: the new file just joins it as another duplicate.
             group_id = other_entry["group_id"]
-            move_to_group(entry, path_lookup, group_id)
+            move_to_group(entry, path_lookup, group_id, duplicates_dir)
         else:
             # First collision for `other_entry` - form a brand new group now,
             # deciding the canonical once, permanently.
@@ -290,7 +309,7 @@ def main():
             # its original recorded path since it was never moved before.
             path_lookup.setdefault(match_key, Path(other_entry["path"]))
             path_lookup.setdefault(relkey, path)
-            move_to_group(dup_entry, path_lookup, group_id)
+            move_to_group(dup_entry, path_lookup, group_id, duplicates_dir)
             other_entry.pop("_key", None)
 
         if matched_by == "sha256":
@@ -302,7 +321,7 @@ def main():
     for entry in files_state.values():
         entry.pop("_key", None)
 
-    save_state(state)
+    save_state(state_path, state)
 
     # Write/refresh the audit report from the full (persisted) state, so it's
     # always a complete picture even across multiple incremental runs.
@@ -312,7 +331,7 @@ def main():
         if gid:
             groups.setdefault(gid, []).append(relkey)
 
-    with open(REPORT_PATH, "w", newline="") as f:
+    with open(report_path, "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["group_id", "role", "filename", "confidence", "source", "current_path"])
         for gid, members in sorted(groups.items()):
@@ -327,8 +346,4 @@ def main():
     print(f"\nThis run: {exact_groups_formed} new exact-hash collisions, "
           f"{perceptual_groups_formed} new perceptual-hash collisions.")
     print(f"Cumulative: {total_groups} duplicate groups, {total_duplicates_moved} files moved into "
-          f"{DUPLICATES_DIR}, report at {REPORT_PATH}")
-
-
-if __name__ == "__main__":
-    main()
+          f"{duplicates_dir}, report at {report_path}")

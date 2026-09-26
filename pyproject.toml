@@ -1,16 +1,2 @@
-[project]
-name = "face-match"
-version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
-requires-python = ">=3.11"
-dependencies = [
-    "imagehash>=4.3.2",
-    "insightface>=2.0",
-    "numpy>=2.4.6",
-    "onnxruntime>=1.30.0",
-    "opencv-python-headless>=5.0.0.93",
-    "pillow>=12.3.0",
-    "pillow-heif>=1.8.0",
-    "tqdm>=4.70.1",
-]
+[tool.uv.workspace]
+members = ["packages/*"]

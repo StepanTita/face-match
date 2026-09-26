@@ -8,6 +8,12 @@ resolution-markers = [
     "python_full_version < '3.12'",
 ]
 
+[manifest]
+members = [
+    "facematch-cli",
+    "facematch-core",
+]
+
 [[package]]
 name = "certifi"
 version = "2026.7.22"
@@ -174,11 +180,27 @@ wheels = [
 ]
 
 [[package]]
-name = "face-match"
+name = "facematch-cli"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "packages/cli" }
 dependencies = [
+    { name = "facematch-core" },
     { name = "imagehash" },
+    { name = "tqdm" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "facematch-core", editable = "packages/core" },
+    { name = "imagehash", specifier = ">=4.3.2" },
+    { name = "tqdm", specifier = ">=4.70.1" },
+]
+
+[[package]]
+name = "facematch-core"
+version = "0.1.0"
+source = { editable = "packages/core" }
+dependencies = [
     { name = "insightface" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
@@ -186,19 +208,16 @@ dependencies = [
     { name = "opencv-python-headless" },
     { name = "pillow" },
     { name = "pillow-heif" },
-    { name = "tqdm" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "imagehash", specifier = ">=4.3.2" },
     { name = "insightface", specifier = ">=2.0" },
     { name = "numpy", specifier = ">=2.4.6" },
     { name = "onnxruntime", specifier = ">=1.30.0" },
     { name = "opencv-python-headless", specifier = ">=5.0.0.93" },
     { name = "pillow", specifier = ">=12.3.0" },
     { name = "pillow-heif", specifier = ">=1.8.0" },
-    { name = "tqdm", specifier = ">=4.70.1" },
 ]
 
 [[package]]

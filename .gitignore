@@ -10,7 +10,7 @@ wheels/
 .venv
 matched/
 scratch/
-progress.json
+.facematch/
 reference_embeddings.npz
 checkpoint.sqlite3
 checkpoint.sqlite3-wal
@@ -21,5 +21,6 @@ references/
 sources.local.json
 dedupe_report.csv
 dedupe_state.json
+progress.json
 *.log
 .DS_Store

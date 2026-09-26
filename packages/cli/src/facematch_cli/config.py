@@ -1,18 +1,19 @@
 """Loads user-specific archive locations from a local, gitignored config file
-(sources.local.json), so no personal paths ever need to live in tracked code.
-See sources.example.json for the expected shape."""
+(sources.local.json) in the current project directory, so no personal paths
+ever need to live in tracked code. See sources.example.json for the expected
+shape."""
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
-CONFIG_PATH = Path(__file__).parent.parent.parent / "sources.local.json"
+from .paths import project_dir
 
 
 def load_sources_config() -> dict:
-    if not CONFIG_PATH.exists():
+    path = project_dir() / "sources.local.json"
+    if not path.exists():
         return {}
-    return json.loads(CONFIG_PATH.read_text())
+    return json.loads(path.read_text())
 
 
 def get_default_sources() -> list[str]:

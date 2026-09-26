@@ -1,8 +1,8 @@
 """Durable, resumable checkpoint of which candidates have already been processed.
 
 Backed by SQLite (single writer: the main process, which is also the sole
-writer of matches.csv/progress.json, so there's no multi-process write
-contention here - workers only ever return small result dicts over IPC).
+writer of matches.csv, so there's no multi-process write contention here -
+workers only ever return small result dicts over IPC).
 Every result is committed to disk immediately as it arrives, so a crash or
 kill -9 loses at most the handful of items that were mid-flight in workers at
 that instant, never previously-committed work.

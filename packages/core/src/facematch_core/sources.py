@@ -7,7 +7,7 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from .core import IMAGE_EXTS, VIDEO_EXTS
+from .decode import IMAGE_EXTS, VIDEO_EXTS
 
 # Out-of-scope folder names, matched case-insensitively as a substring of any
 # path component. NOTE: "takeout" is deliberately NOT in this set. It only

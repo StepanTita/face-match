@@ -1,10 +1,9 @@
-"""Shared utilities: face model loading, image decoding, embedding/matching helpers."""
+"""Image/video decoding, including HEIC, and ffmpeg-based frame sampling."""
 from __future__ import annotations
 
 import io
 import os
 import subprocess
-import tempfile
 from pathlib import Path
 
 import cv2
@@ -12,48 +11,6 @@ import numpy as np
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".bmp", ".tiff", ".tif", ".webp"}
 VIDEO_EXTS = {".mov", ".mp4", ".m4v", ".avi", ".mkv", ".3gp"}
-
-# Cosine-similarity accept threshold for ArcFace (buffalo_l) embeddings.
-# The "confident" threshold most ArcFace-based pipelines use is ~0.6, tuned for
-# precision (e.g. access control). For a personal recall-biased archive search
-# across a ~40 year age range and poor old-photo quality, we deliberately use a
-# much lower default so borderline true positives aren't silently dropped -
-# the user said they'd rather manually reject false positives than miss a
-# real photo. 0.38 sits in the high-recall part of the commonly cited
-# 0.35-0.45 range for this use case.
-DEFAULT_THRESHOLD = 0.38
-
-_APP = None
-
-
-def get_face_app(intra_op_threads: int | None = None):
-    """Lazily load & cache the InsightFace FaceAnalysis app (buffalo_l, CPU).
-
-    intra_op_threads: when running one worker PROCESS per CPU core (our
-    scan.py design), each ONNX Runtime session should use a SINGLE intra-op
-    thread. Left at ORT's default (which sizes its intra-op pool to all
-    physical cores), N worker processes would each spin up an N-core-wide
-    threadpool, causing massive oversubscription and context-switch thrashing
-    once N > 1. Pinning threads=1 here and getting parallelism from the
-    process pool instead scales far better for many small, independent
-    single-image inferences (each call is cheap, so per-call thread-pool
-    scheduling overhead in the multi-threaded case dominates anyway).
-    """
-    global _APP
-    if _APP is None:
-        import onnxruntime as ort
-        from insightface.app import FaceAnalysis
-
-        kwargs = {"providers": ["CPUExecutionProvider"]}
-        if intra_op_threads:
-            sess_options = ort.SessionOptions()
-            sess_options.intra_op_num_threads = intra_op_threads
-            sess_options.inter_op_num_threads = 1
-            kwargs["sess_options"] = sess_options
-
-        _APP = FaceAnalysis(name="buffalo_l", **kwargs)
-        _APP.prepare(ctx_id=0, det_size=(640, 640))
-    return _APP
 
 
 def register_heif_opener():
@@ -91,38 +48,6 @@ def decode_image_path(path: str) -> np.ndarray | None:
         arr = np.array(im)
         return cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
     return cv2.imread(path, cv2.IMREAD_COLOR)
-
-
-def largest_face_embedding(img_bgr: np.ndarray):
-    """Return (embedding, bbox, det_score) of the largest-bbox face, or None."""
-    if img_bgr is None:
-        return None
-    app = get_face_app()
-    faces = app.get(img_bgr)
-    if not faces:
-        return None
-    faces.sort(key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]), reverse=True)
-    f = faces[0]
-    return f.normed_embedding, f.bbox, f.det_score
-
-
-def all_face_embeddings(img_bgr: np.ndarray):
-    """Return list of (embedding, bbox, det_score) for every detected face."""
-    if img_bgr is None:
-        return []
-    app = get_face_app()
-    faces = app.get(img_bgr)
-    return [(f.normed_embedding, f.bbox, f.det_score) for f in faces]
-
-
-def cosine_sim(a: np.ndarray, b: np.ndarray) -> float:
-    return float(np.dot(a, b))
-
-
-def best_match_score(embedding: np.ndarray, reference_embeddings: np.ndarray) -> float:
-    """Max cosine similarity between embedding and any row of reference_embeddings."""
-    sims = reference_embeddings @ embedding
-    return float(np.max(sims))
 
 
 def extract_frames_ffmpeg(video_path: str, out_dir: str, fps: float = 0.7, max_frames: int | None = None) -> list[str]:

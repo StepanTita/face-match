@@ -21,19 +21,15 @@ import numpy as np
 # OpenCV spins up its own internal thread pool (independent of ONNX Runtime's
 # intra-op threads) for image decode/resize ops. Left at its default, each
 # worker PROCESS would also fan out across all cores internally, causing the
-# same oversubscription problem discussed in core.get_face_app - just from a
+# same oversubscription problem discussed in model.get_face_app - just from a
 # different library. Pin it to 1 so all parallelism comes from the process
 # pool, not from nested thread pools inside each process.
 cv2.setNumThreads(1)
 
-from .core import (
-    all_face_embeddings,
-    best_match_score,
-    decode_image_path,
-    extract_frames_ffmpeg,
-    get_face_app,
-)
-from .progress import thumbnail_data_uri
+from .decode import decode_image_path, extract_frames_ffmpeg
+from .events import thumbnail_data_uri
+from .match import all_face_embeddings, best_match_score
+from .model import get_face_app
 
 # Set once per worker process by init_worker().
 _REFS: np.ndarray | None = None
@@ -60,7 +56,7 @@ def init_worker(refs: np.ndarray, threshold: float, scratch_root: str, matched_d
     get_face_app(intra_op_threads=intra_op_threads)
 
 
-def _safe_dest_name(display_name: str) -> str:
+def safe_dest_name(display_name: str) -> str:
     cleaned = display_name.replace("::", "__").replace("/", "_").replace(" ", "_")
     return cleaned[-200:]
 
@@ -84,7 +80,7 @@ def _process_image(cand) -> dict:
             return {"display_name": cand.display_name, "status": "no_face"}
         best_score = max(best_match_score(emb, _REFS) for emb, bbox, score in faces)
         if best_score >= _THRESHOLD:
-            dest_name = _safe_dest_name(cand.display_name)
+            dest_name = safe_dest_name(cand.display_name)
             dest_path = _MATCHED_DIR / dest_name
             shutil.copy2(local_path, dest_path)
             return {
@@ -128,14 +124,14 @@ def _process_video(cand) -> dict:
                     matched_timestamps.append(round(ts, 1))
             os.remove(frame_path)
         if matched_timestamps:
-            thumb_name = _safe_dest_name(cand.display_name) + ".jpg"
+            thumb_name = safe_dest_name(cand.display_name) + ".jpg"
             thumb_path = _THUMBS_DIR / thumb_name
             cv2.imwrite(str(thumb_path), best_frame_img)
             # Full video copy, same convention as images (archive-prefixed,
             # collision-free filename). local_path already holds the whole
             # extracted file at this point (extract_to() always pulls the
             # complete entry, not just sampled frames), so this is just a copy.
-            video_dest_name = _safe_dest_name(cand.display_name)
+            video_dest_name = safe_dest_name(cand.display_name)
             video_dest_path = _MATCHED_DIR / video_dest_name
             shutil.copy2(local_path, video_dest_path)
             return {

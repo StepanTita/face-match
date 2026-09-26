@@ -1,126 +1,188 @@
-# face-match
+# facematch
 
-A personal tool for finding photos and videos of a specific person across a
-large, messy photo/video archive (phone backups, cloud exports, old drives),
-using face-embedding similarity instead of manual browsing.
+Find every photo and video of one person across a giant, messy archive —
+phone backups, cloud takeouts, old external drives — without scrolling
+through any of it by hand.
 
-It builds a small set of reference face embeddings from photos/videos you
-provide, then streams through your archive (folders and/or zip files,
-including nested zips) comparing every detected face against those
-references and copying anything that matches above a threshold into a
-`matched/` folder.
-
-## How it works
-
-- **Embeddings**: [InsightFace](https://github.com/deepinsight/insightface)
-  (`buffalo_l` / ArcFace) via ONNX Runtime, run on CPU.
-- **Streaming scan**: zip archives are read entry-by-entry rather than fully
-  extracted, so scanning works even against very large exports (e.g. a full
-  cloud photo takeout) without needing that much free disk space.
-- **High recall by default**: the match threshold is tuned low relative to
-  typical face-verification defaults, on the assumption that missing a real
-  match is worse than having to manually reject some false positives.
-- **Parallel**: a pool of worker processes (default: CPU count - 1) does the
-  actual decoding/detection/embedding, so scanning scales with cores.
-- **Checkpointed/resumable**: every processed file is recorded in a local
-  SQLite checkpoint as it's completed, so an interrupted or killed scan can
-  be resumed from where it left off, without redoing work or duplicating
-  matches.
-- **Live progress**: the scan writes `progress.json` continuously; open
-  `progress.html` in a browser (served locally) to watch progress and recent
-  matches update in real time.
-- **Dedupe pass**: the same real-world photo often exists multiple times
-  across overlapping backup sources. A separate dedupe script groups
-  matched files by exact hash and perceptual hash, moving duplicates aside
-  while leaving one canonical copy in place.
-
-## Setup
+You give it a few reference photos of the person and a path. It streams
+through everything under that path (folders, zip files, even zips nested
+inside zips), runs face detection and embedding on every image and video it
+finds, and copies out anything that matches. It runs entirely on your
+machine: nothing is uploaded anywhere.
 
 ```bash
+uv run facematch build-references
+uv run facematch find --sources ~/Photos ~/old-icloud-export.zip
+```
+
+## Features
+
+- **Streaming archive scan** — reads zip entries one at a time instead of
+  extracting the whole archive first, so scanning a 200GB cloud export
+  doesn't need 200GB of free disk space. Zips inside zips are handled the
+  same way.
+- **Resumable by default** — every processed file is checkpointed to a local
+  SQLite database as it completes. Kill the scan, restart your machine,
+  re-run the same command: it picks up exactly where it left off.
+- **Parallel** — a pool of worker processes (CPU count − 1 by default) does
+  the decoding, detection, and embedding, so it scales with cores.
+- **Background jobs** — kick off a long scan, close the terminal, and check
+  on it later:
+
+  ```bash
+  facematch find --background
+  facematch find status --watch
+  ```
+
+- **Tuned for recall** — the match threshold defaults to the high-recall end
+  of the typical range, on the assumption that missing a real match is worse
+  than having to reject a few false positives by hand. Archive photos often
+  span decades, with real changes in age and appearance and plenty of
+  low-quality scans, so this matters more here than in a typical
+  face-verification setup.
+- **Dedupe pass** — the same photo often exists more than once across
+  overlapping backups. `facematch dedupe` groups matches by exact and
+  perceptual hash and files the duplicates aside, safe to re-run anytime.
+- **Fully local** — no network calls, no accounts, no telemetry. See
+  [Privacy](#privacy).
+
+Not built yet: grouping every face in an archive by person with no reference
+photos required (`facematch group`), and packaged binaries so you don't need
+a Python toolchain to run this. Both are next — see [Roadmap](#roadmap).
+
+## Install
+
+Requires [`uv`](https://docs.astral.sh/uv/) and Python 3.11+.
+
+```bash
+git clone <this repo>
+cd facematch
 uv sync
 ```
 
-### Reference photos
+`uv sync` builds the workspace's two packages — `facematch-core` (the
+engine) and `facematch-cli` (the `facematch` command) — into a local
+virtualenv. Run the tool with `uv run facematch ...` from whichever
+directory holds your `references/`, `matched/`, and configuration: every
+command resolves its inputs and outputs relative to the current working
+directory, so a given directory is a self-contained "project" for one
+person's search.
 
-Create a `references/` folder in the project root (this is gitignored - it
-will contain real photos of the person you're matching against, so it should
-never be committed) and put a handful of clear photos (and optionally a
-short video) of that person in it. More references, across different
-ages/angles/lighting, improve accuracy.
+Packaged, double-clickable binaries for macOS and Linux (no `uv`/Python
+setup required) are planned but not available yet.
 
-Then build the embeddings:
+## Quickstart
+
+**1. Give it some reference photos.** Create a `references/` folder and drop
+in a handful of clear photos (and optionally a short video) of the person
+you're looking for — different ages, angles, and lighting all help.
 
 ```bash
-uv run build_references.py
+mkdir references
+cp ~/some-clear-photos-of-them/*.jpg references/
 ```
 
-This produces `reference_embeddings.npz`.
+`references/` is gitignored: it holds real photos of a real person and
+should never end up in version control.
 
-### Configuring your sources
+**2. Build embeddings from them:**
 
-Copy the example config and edit it with your own paths:
+```bash
+uv run facematch build-references
+```
+
+This writes `reference_embeddings.npz`.
+
+**3. Point it at an archive:**
+
+```bash
+uv run facematch find --sources ~/Photos ~/Downloads/icloud_export.zip
+```
+
+Matches land in `matched/`, get logged to `matched/matches.csv`, and are
+tracked in `checkpoint.sqlite3` as the scan runs. Stop it anytime with
+Ctrl-C — running the same command again resumes instead of starting over.
+
+You can also point `find` at sources listed in a config file instead of
+passing them as flags every time:
 
 ```bash
 cp sources.example.json sources.local.json
+# edit sources.local.json with your real paths — it's gitignored
+uv run facematch find
 ```
 
-```json
-{
-  "drive_root": "/path/to/your/archive",
-  "sources": [
-    "/path/to/your/photos.zip",
-    "/path/to/your/photos_folder"
-  ]
-}
-```
-
-`sources.local.json` is gitignored. Each entry in `sources` can be a
-directory or a `.zip` file.
-
-## Running a scan
+Every flag, default, and example invocation is documented in the CLI
+itself — this README won't repeat it:
 
 ```bash
-uv run scan.py
+uv run facematch find --help
+uv run facematch --help          # full list of commands
 ```
 
-or, to override the configured sources for a one-off run:
+## How it works
 
-```bash
-uv run scan.py --sources "/path/a" "/path/b/archive.zip" --threshold 0.38 --workers 8
-```
+1. **Reference embeddings.** Each reference photo/video goes through
+   [InsightFace](https://github.com/deepinsight/insightface) (`buffalo_l` /
+   ArcFace, via ONNX Runtime, CPU-only) to produce a 512-dimensional face
+   embedding — a vector where visually similar faces land close together.
+2. **Scan.** Every file under your source paths goes through the same
+   detection + embedding step. Each detected face's embedding is compared
+   against every reference embedding using cosine similarity.
+3. **Threshold.** A face counts as a match if its best similarity score
+   clears the configured threshold (`--threshold`, high-recall by default —
+   see [Features](#features)).
+4. **Checkpoint.** Whether a file matched, didn't match, or errored, the
+   outcome is committed to `checkpoint.sqlite3` immediately, one file at a
+   time — so a scan is safe to interrupt at any point and resume later
+   without redoing work or double-copying matches.
 
-Useful flags:
+## Commands
 
-- `--threshold` - cosine similarity cutoff for a match (default tuned for recall).
-- `--workers` - number of worker processes.
-- `--limit N` - stop after N newly-processed candidates (useful for testing).
-- `--retry-errors` - re-attempt items previously checkpointed as errors.
+Each command is fully documented by its own `--help`, including realistic
+example invocations — run `facematch <command> --help` for the complete
+picture. This is just the map:
 
-While it's running, open `progress.html` (e.g. via `python -m http.server`
-in the project directory) to watch live progress.
+| Command | What it does |
+|---|---|
+| `facematch build-references` | Build `reference_embeddings.npz` from the photos/videos in `references/`. |
+| `facematch find` | Scan your archive and copy out matches. Supports `--background`, `find status`, and `find restart` for job control. |
+| `facematch dedupe` | Collapse duplicate matches (exact + perceptual hash) into one canonical copy each. |
+| `facematch backfill-videos` | Copy full video files for matches that only have a saved thumbnail, without re-running detection. |
 
-Matches are copied into `matched/`, logged in `matched/matches.csv`, and
-tracked in `checkpoint.sqlite3` so the scan can be safely stopped and
-resumed at any time.
+## Privacy
 
-### Backfilling full videos
+This tool exists to run face recognition against your own private photo and
+video archive, so it's worth being explicit: **everything happens on your
+machine.** There are no network calls, no accounts, and no telemetry. Source
+files are only ever read and copied, never modified or deleted. The engine
+(`packages/core`) is a small, readable Python package if you want to verify
+any of that yourself rather than take it on faith.
 
-Earlier versions of the scan only saved a thumbnail for matched videos.
-`backfill_videos.py` copies the full video file for any already-matched
-video row that's missing one, without re-running detection:
+## Project layout
 
-```bash
-uv run backfill_videos.py
-```
+A `uv` workspace with two packages, split so a future GUI can reuse the same
+engine without duplicating any matching logic:
 
-## Deduplicating results
+- **`packages/core`** (`facematch-core`) — the engine: model loading,
+  image/video decoding, embedding and matching, archive walking, and
+  checkpointing. No CLI or UI code lives here.
+- **`packages/cli`** (`facematch-cli`) — the `facematch` command, a thin
+  front end over `facematch-core`.
 
-```bash
-uv run dedupe.py
-```
+## Roadmap
 
-This groups matched files that are byte-identical or perceptually
-near-identical (e.g. the same photo re-exported at different quality by
-different backup pipelines), keeping the highest-confidence copy in place
-and moving the rest into `matched/duplicates/<group>/`. It's safe to run
-incrementally / repeatedly - already-classified files are never reshuffled.
+- `facematch group` — cluster every face across an archive by person, with
+  no reference photos needed.
+- Packaged, signed binaries for macOS and Linux, so running this doesn't
+  require a Python toolchain.
+
+## Contributing
+
+Issues and pull requests are welcome. There's no formal contributing guide
+yet — for anything beyond a small fix, open an issue first to talk through
+the approach.
+
+## License
+
+[MIT](LICENSE)
