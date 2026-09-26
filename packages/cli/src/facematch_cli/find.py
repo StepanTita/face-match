@@ -99,6 +99,7 @@ def candidate_generator(sources: list[str], scratch_root: str, tracker: Progress
                 skipped += 1
                 continue
             yield cand
+    tracker.set_total_known()
     if skipped:
         log(f"[resume] skipped {skipped} already-checkpointed items")
 
@@ -216,7 +217,7 @@ def run_scan(args: argparse.Namespace) -> None:
         return
 
     is_background_child = bool(args._run_id)
-    state = runstate.RunState(args._run_id) if is_background_child else None
+    state = runstate.RunState("find", args._run_id) if is_background_child else None
 
     if state is not None:
         log = print  # stdout is already redirected to the run's log.txt by the parent
@@ -347,7 +348,7 @@ def _child_argv(args: argparse.Namespace, run_id: str) -> list[str]:
 
 def _start_background(args: argparse.Namespace) -> None:
     run_id = runstate.new_run_id()
-    state = runstate.RunState(run_id)
+    state = runstate.RunState("find", run_id)
     state.dir.mkdir(parents=True, exist_ok=True)
     state.write_meta(
         run_id=run_id,
@@ -417,14 +418,14 @@ def _format_status_line(run_id: str, meta: dict, status: dict, state_label: str)
 
 
 def run_status(args: argparse.Namespace) -> None:
-    run_id = args.run_id or paths.latest_run_id()
+    run_id = args.run_id or paths.latest_run_id("find")
     if run_id is None:
         print("No find runs recorded yet. Start one with `facematch find --background`.")
         sys.exit(1)
 
-    state = runstate.RunState(run_id)
+    state = runstate.RunState("find", run_id)
     if not state.dir.exists():
-        print(f"ERROR: no run '{run_id}' found under {paths.runs_root()}")
+        print(f"ERROR: no run '{run_id}' found under {paths.runs_root('find')}")
         sys.exit(1)
 
     try:

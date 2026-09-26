@@ -31,7 +31,9 @@ from .events import thumbnail_data_uri
 from .match import all_face_embeddings, best_match_score
 from .model import get_face_app
 
-# Set once per worker process by init_worker().
+# Set once per worker process by init_worker() (find) or init_worker_group()
+# (group) - only one of the two ever runs in a given process, so sharing
+# these globals between the two entry points is safe.
 _REFS: np.ndarray | None = None
 _THRESHOLD: float = 0.38
 _SCRATCH_ROOT: Path | None = None
@@ -92,6 +94,84 @@ def _process_image(cand) -> dict:
                 "thumb": thumbnail_data_uri(img),
             }
         return {"display_name": cand.display_name, "status": "below_threshold", "score": best_score}
+    except Exception as e:
+        return {"display_name": cand.display_name, "status": "error", "error": str(e)}
+    finally:
+        if local_path and cand.loose_path is None and os.path.exists(local_path):
+            os.remove(local_path)
+
+
+# ---------------------------------------------------------------------------
+# `facematch group` worker entry points: detect and embed EVERY face in every
+# file (no reference set, no matching, no copying) - `group`'s clustering
+# pass runs later, over everything this records. See group_store.py.
+# ---------------------------------------------------------------------------
+
+def init_worker_group(scratch_root: str, intra_op_threads: int):
+    global _SCRATCH_ROOT, _WORKER_SCRATCH
+    _SCRATCH_ROOT = Path(scratch_root)
+    _WORKER_SCRATCH = _SCRATCH_ROOT / f"w{os.getpid()}"
+    _WORKER_SCRATCH.mkdir(parents=True, exist_ok=True)
+    get_face_app(intra_op_threads=intra_op_threads)
+
+
+def process_candidate_group(cand) -> dict:
+    """Runs in a worker process. Returns a small result dict: status
+    'done' (faces present), 'no_face', or 'error' - never 'matched'/
+    'below_threshold', since there's nothing to match against here."""
+    result = _process_image_group(cand) if cand.kind == "image" else _process_video_group(cand)
+    result["key"] = cand.key
+    result["kind"] = cand.kind
+    return result
+
+
+def _process_image_group(cand) -> dict:
+    local_path = None
+    try:
+        local_path = cand.extract_to(str(_WORKER_SCRATCH))
+        img = decode_image_path(local_path)
+        if img is None:
+            return {"display_name": cand.display_name, "status": "error", "error": "could not decode"}
+        faces = all_face_embeddings(img)
+        if not faces:
+            return {"display_name": cand.display_name, "status": "no_face"}
+        face_dicts = [
+            {"embedding": emb, "bbox": [float(x) for x in bbox], "det_score": float(score)}
+            for emb, bbox, score in faces
+        ]
+        return {"display_name": cand.display_name, "status": "done", "faces": face_dicts}
+    except Exception as e:
+        return {"display_name": cand.display_name, "status": "error", "error": str(e)}
+    finally:
+        if local_path and cand.loose_path is None and os.path.exists(local_path):
+            os.remove(local_path)
+
+
+def _process_video_group(cand) -> dict:
+    local_path = None
+    frame_dir = str(_WORKER_SCRATCH / "frames")
+    fps = 0.7
+    try:
+        local_path = cand.extract_to(str(_WORKER_SCRATCH))
+        frames = extract_frames_ffmpeg(local_path, frame_dir, fps=fps)
+        if not frames:
+            return {"display_name": cand.display_name, "status": "error", "error": "no frames extracted"}
+        face_dicts = []
+        for i, frame_path in enumerate(frames):
+            ts = i / fps
+            img = decode_image_path(frame_path)
+            faces = all_face_embeddings(img) if img is not None else []
+            for emb, bbox, score in faces:
+                face_dicts.append({
+                    "embedding": emb,
+                    "bbox": [float(x) for x in bbox],
+                    "det_score": float(score),
+                    "video_ts": round(ts, 1),
+                })
+            os.remove(frame_path)
+        if not face_dicts:
+            return {"display_name": cand.display_name, "status": "no_face"}
+        return {"display_name": cand.display_name, "status": "done", "faces": face_dicts}
     except Exception as e:
         return {"display_name": cand.display_name, "status": "error", "error": str(e)}
     finally:

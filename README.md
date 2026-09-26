@@ -46,9 +46,15 @@ uv run facematch find --sources ~/Photos ~/old-icloud-export.zip
 - **Fully local** — no network calls, no accounts, no telemetry. See
   [Privacy](#privacy).
 
-Not built yet: grouping every face in an archive by person with no reference
-photos required (`facematch group`), and packaged binaries so you don't need
-a Python toolchain to run this. Both are next — see [Roadmap](#roadmap).
+- **Group by person, no references needed** — `facematch group` detects
+  every face across an archive and clusters them into `person_001/`,
+  `person_002/`, ... folders using face-embedding similarity alone. Faces
+  that don't form a confident group land in `unclustered/` instead of being
+  dropped, and a file with several people in it is placed in every relevant
+  person's folder.
+
+Not built yet: packaged binaries so you don't need a Python toolchain to run
+this — see [Roadmap](#roadmap).
 
 ## Install
 
@@ -112,11 +118,23 @@ cp sources.example.json sources.local.json
 uv run facematch find
 ```
 
+**Don't know who's in the archive, or want everyone sorted, not just one
+person?** Skip references entirely:
+
+```bash
+uv run facematch group --sources ~/Photos --out ~/Photos-by-person
+```
+
+This clusters every detected face by similarity and writes `person_001/`,
+`person_002/`, ... folders under `--out`, plus an `unclustered/` folder for
+faces that didn't form a confident group.
+
 Every flag, default, and example invocation is documented in the CLI
 itself — this README won't repeat it:
 
 ```bash
 uv run facematch find --help
+uv run facematch group --help
 uv run facematch --help          # full list of commands
 ```
 
@@ -147,6 +165,7 @@ picture. This is just the map:
 |---|---|
 | `facematch build-references` | Build `reference_embeddings.npz` from the photos/videos in `references/`. |
 | `facematch find` | Scan your archive and copy out matches. Supports `--background`, `find status`, and `find restart` for job control. |
+| `facematch group` | Cluster every face in your archive by person, no references needed. Supports the same `--background` / `status` / `restart` job control as `find`. |
 | `facematch dedupe` | Collapse duplicate matches (exact + perceptual hash) into one canonical copy each. |
 | `facematch backfill-videos` | Copy full video files for matches that only have a saved thumbnail, without re-running detection. |
 
@@ -172,8 +191,6 @@ engine without duplicating any matching logic:
 
 ## Roadmap
 
-- `facematch group` — cluster every face across an archive by person, with
-  no reference photos needed.
 - Packaged, signed binaries for macOS and Linux, so running this doesn't
   require a Python toolchain.
 

@@ -1,6 +1,8 @@
 """Bookkeeping for `--background` runs: a small on-disk record per run under
-`.facematch/runs/<run_id>/`, so `facematch find status` (or a later session
-entirely) can find out how a detached run is doing, or how it ended.
+`.facematch/runs/<command>/<run_id>/`, so `facematch find status` / `facematch
+group status` (or a later session entirely) can find out how a detached run
+is doing, or how it ended. Shared by every command that supports background
+job control - see find.py and group.py.
 
     meta.json    run id, command, args, pid, start/end time, exit_status
     status.json  the latest ProgressSnapshot, written periodically
@@ -43,9 +45,10 @@ def _read_json(path: Path) -> dict:
 
 
 class RunState:
-    def __init__(self, run_id: str):
+    def __init__(self, command: str, run_id: str):
+        self.command = command
         self.run_id = run_id
-        self.dir = paths.run_dir(run_id)
+        self.dir = paths.run_dir(command, run_id)
         self.meta_path = self.dir / "meta.json"
         self.status_path = self.dir / "status.json"
         self.log_path = self.dir / "log.txt"

@@ -9,12 +9,16 @@ wheels/
 # Virtual environments
 .venv
 matched/
+grouped/
 scratch/
 .facematch/
 reference_embeddings.npz
 checkpoint.sqlite3
 checkpoint.sqlite3-wal
 checkpoint.sqlite3-shm
+group_checkpoint.sqlite3
+group_checkpoint.sqlite3-wal
+group_checkpoint.sqlite3-shm
 
 # Personal data / local configuration - never commit
 references/

@@ -36,18 +36,20 @@ def scratch_root(subdir: str) -> Path:
     return project_dir() / "scratch" / subdir
 
 
-def runs_root() -> Path:
-    """Where `--background` run state (meta.json, status.json, log.txt) lives,
-    one subdirectory per run id."""
-    return project_dir() / ".facematch" / "runs"
+def runs_root(command: str) -> Path:
+    """Where a command's `--background` run state (meta.json, status.json,
+    log.txt) lives, one subdirectory per run id. Namespaced by command
+    (`find`, `group`, ...) so `facematch group status` can never pick up a
+    more-recent `find` run's id, or vice versa."""
+    return project_dir() / ".facematch" / "runs" / command
 
 
-def run_dir(run_id: str) -> Path:
-    return runs_root() / run_id
+def run_dir(command: str, run_id: str) -> Path:
+    return runs_root(command) / run_id
 
 
-def latest_run_id() -> str | None:
-    root = runs_root()
+def latest_run_id(command: str) -> str | None:
+    root = runs_root(command)
     if not root.exists():
         return None
     run_ids = sorted(p.name for p in root.iterdir() if p.is_dir())
@@ -68,3 +70,11 @@ def dedupe_state_path() -> Path:
 
 def dedupe_report_path() -> Path:
     return project_dir() / "dedupe_report.csv"
+
+
+def group_checkpoint_path() -> Path:
+    return project_dir() / "group_checkpoint.sqlite3"
+
+
+def default_grouped_dir() -> Path:
+    return project_dir() / "grouped"
