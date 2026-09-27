@@ -81,7 +81,7 @@ setup required) are planned but not available yet.
 
 **1. Give it some reference photos.** Create a `references/` folder and drop
 in a handful of clear photos (and optionally a short video) of the person
-you're looking for — different ages, angles, and lighting all help.
+you're looking for.
 
 ```bash
 mkdir references
@@ -90,6 +90,46 @@ cp ~/some-clear-photos-of-them/*.jpg references/
 
 `references/` is gitignored: it holds real photos of a real person and
 should never end up in version control.
+
+<details>
+<summary><strong>Pro tips for good reference photos</strong> (click to expand)</summary>
+
+Reference quality matters more than the matching algorithm. A few minutes
+here saves a lot of threshold-tuning later:
+
+- **5–15 photos is the sweet spot.** Fewer than 5 and the embeddings get
+  noisy; past ~20 you're mostly adding redundancy, not signal. Spend extra
+  references on *diversity*, not near-duplicates of the same shot.
+- **Cover different eras if the archive spans decades.** A face changes more
+  than people expect — one reference from one era will under-match photos
+  from 20+ years earlier or later. `find`'s default threshold is already
+  tuned for this kind of recall, but diverse references still help far more
+  than a lower threshold does.
+- **Vary angle** (mostly front-facing and slight 3/4 views — avoid pure
+  profile shots), **lighting** (indoor, outdoor, flash, overcast), and
+  **styling** (with/without glasses, different hair, expressions). Boring,
+  varied snapshots beat a handful of flattering portraits.
+- **One clear face per photo.** `build-references` embeds the *largest*
+  detected face in each file — if your target isn't the biggest face in a
+  group photo, it'll silently embed the wrong person. Crop or pick
+  single-subject shots.
+- **Avoid heavy occlusion** (sunglasses, masks, shading hats) and **heavy
+  filters/edits** — both distort the exact geometry the model keys on. A
+  couple of occluded shots are fine; don't make them the majority.
+- **A short video is worth including.** `build-references` samples several
+  frames from it, so one clip gives you multiple naturally-varied references
+  for the price of one file.
+
+Before running a full archive scan, sanity-check the reference set cheaply —
+`references/` should match itself near-perfectly, so this catches a bad
+reference (wrong face, wrong person) before it pollutes a real scan:
+
+```bash
+uv run facematch build-references
+uv run facematch find --sources references --limit 10
+```
+
+</details>
 
 **2. Build embeddings from them:**
 
@@ -154,6 +194,52 @@ uv run facematch --help          # full list of commands
    outcome is committed to `checkpoint.sqlite3` immediately, one file at a
    time — so a scan is safe to interrupt at any point and resume later
    without redoing work or double-copying matches.
+
+## Demo
+
+To show both commands working end-to-end without using anyone's private
+photos, [`examples/`](examples/) has real photos of three actors — Tom
+Hiddleston, Chris Evans, and Emma Watson — sourced entirely from [Wikimedia
+Commons](https://commons.wikimedia.org) under licenses that permit reuse
+(full credit in [`examples/attributions.json`](examples/attributions.json)).
+The photos span genuinely different quality, lighting, angle, and era
+(roughly 2010-2025), the same conditions a real personal archive has.
+
+**`find`** — 4 Hiddleston photos build the reference embeddings; `find` then
+scans an 18-photo archive containing 5 more Hiddleston photos (real matches)
+plus 6 Evans and 7 Watson photos (true negatives):
+
+<table>
+<tr><td align="center" width="20%"><b>references/</b><br>(4 photos)</td>
+<td align="center">→ <code>facematch find</code> on the 18-photo archive →</td></tr>
+</table>
+
+| Matched (5/5 real Hiddleston photos found) |
+| --- |
+| <img src="examples/results/find/matched/hiddleston_07.jpg" width="110"> <img src="examples/results/find/matched/hiddleston_08.jpg" width="110"> <img src="examples/results/find/matched/hiddleston_09.jpg" width="110"> <img src="examples/results/find/matched/hiddleston_10.jpg" width="110"> <img src="examples/results/find/matched/hiddleston_11.jpg" width="110"> |
+
+All 5 real Hiddleston photos in the archive were found (similarity
+0.59–0.77), and all 13 Evans/Watson photos were correctly rejected — the
+highest false-positive score was 0.155, well under the 0.38 threshold. Full
+scores in [`examples/results/find/matches.csv`](examples/results/find/matches.csv).
+
+**`group`** — no reference photos at all, just the same 18-photo archive
+clustered by face:
+
+| `person_001` (all 7 Watson photos) | `person_002` (all 5 Hiddleston photos) | `person_003` (5/6 Evans photos) |
+| --- | --- | --- |
+| <img src="examples/results/group/person_001/watson_01.jpg" width="70"> <img src="examples/results/group/person_001/watson_02.jpg" width="70"> <img src="examples/results/group/person_001/watson_03.jpg" width="70"> | <img src="examples/results/group/person_002/hiddleston_07.jpg" width="70"> <img src="examples/results/group/person_002/hiddleston_08.jpg" width="70"> <img src="examples/results/group/person_002/hiddleston_09.jpg" width="70"> | <img src="examples/results/group/person_003/evans_01.jpg" width="70"> <img src="examples/results/group/person_003/evans_04.jpg" width="70"> <img src="examples/results/group/person_003/evans_06.jpg" width="70"> |
+
+Three people in, three clean clusters out — with one honest imperfection:
+one Evans photo (a formal press-tour shot, different lighting/context than
+his others) didn't merge into `person_003` and landed in `unclustered/`
+instead of being lost or wrongly merged:
+
+<img src="examples/results/group/unclustered/evans_05.jpg" width="70">
+
+That's the min-cluster-size/threshold tradeoff described in `facematch group
+--help` in practice — real clustering on real photos, not a cherry-picked
+run.
 
 ## Commands
 
