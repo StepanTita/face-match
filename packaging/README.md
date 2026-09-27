@@ -123,23 +123,24 @@ downloads from. See that workflow file for the exact build/test steps it
 runs (the same smoke test and real end-to-end scan described above, run in
 CI for both platforms on every release).
 
-It runs two ways:
+**Version scheme**: `vYYYY.MM.DD.N` — the release date plus a same-day
+counter (`v2026.09.27.1`, then `v2026.09.27.2` for a second release the same
+day, and so on). No manual version bookkeeping needed.
 
-- **Automatically**, whenever a `v*` tag is pushed:
+To cut a release, trigger the workflow manually (no tag to compute or push
+yourself — it figures out today's next tag on its own):
+
+- **GitHub UI**: Actions tab → "Release" workflow → "Run workflow" → leave
+  the tag field blank → Run workflow.
+- **`gh` CLI**:
   ```bash
-  git tag -a v0.1.1 -m "v0.1.1: ..."
-  git push origin v0.1.1
+  gh workflow run release.yml
   ```
-- **Manually**, without pushing a tag first — useful for re-cutting a release
-  after fixing a failed build, or releasing from a branch:
-  - **GitHub UI**: Actions tab → "Release" workflow → "Run workflow" →
-    enter the version tag (e.g. `v0.1.1`) → Run workflow.
-  - **`gh` CLI**:
-    ```bash
-    gh workflow run release.yml -f tag=v0.1.1
-    ```
-  A manual run creates the `v0.1.1` tag automatically if it doesn't already
-  exist yet, pointing at whichever branch/commit the workflow ran against.
+
+Leave the `tag` input blank for the normal path above. It also accepts an
+explicit tag (e.g. `gh workflow run release.yml -f tag=v2026.09.27.2`) for
+the rare case of re-cutting a specific past release, or pushing a `v*` git
+tag directly if you want a manually-chosen tag name instead.
 
 ## Not part of this pass
 

@@ -17,10 +17,10 @@ on:
     inputs:
       tag:
         description: >-
-          Version tag to release (e.g. v0.1.1). Created automatically if it
-          doesn't already exist, pointing at the branch/commit this workflow
-          runs against.
-        required: true
+          Version tag to release (e.g. v2026.09.27.1). Leave blank to
+          auto-compute the next one for today (vYYYY.MM.DD.N, incrementing N
+          if a release already went out today).
+        required: false
         type: string
 
 permissions:
@@ -99,6 +99,11 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
       - uses: actions/download-artifact@v4
         with:
           path: release-assets
@@ -107,13 +112,25 @@ jobs:
       - name: List assets
         run: ls -la release-assets
 
+      # Version scheme: vYYYY.MM.DD.N - N starts at 1 each day and
+      # increments if a release already went out today. A manual
+      # workflow_dispatch run can still pass an explicit `tag` to override
+      # this (e.g. to re-cut a specific past date), but the normal path is
+      # to leave it blank and let this compute the next one.
       - name: Determine release tag
         id: tag
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          elif [ -n "${{ github.event.inputs.tag }}" ]; then
             echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
           else
-            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+            TODAY=$(date -u +%Y.%m.%d)
+            LAST=$(git tag -l "v${TODAY}.*" | sed "s/^v${TODAY}\.//" | sort -n | tail -1)
+            NEXT=$(( ${LAST:-0} + 1 ))
+            TAG="v${TODAY}.${NEXT}"
+            echo "Computed tag: $TAG"
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Create GitHub Release
