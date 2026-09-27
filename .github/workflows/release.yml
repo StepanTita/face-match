@@ -1,0 +1,105 @@
+name: Release
+
+# Builds a standalone `facematch` binary for macOS and Linux with PyInstaller
+# and attaches them to the GitHub Release for the pushed tag. See
+# packaging/README.md for what it takes to make this dependency stack
+# (InsightFace + ONNX Runtime + OpenCV) work under PyInstaller at all.
+#
+# Asset names are what install.sh depends on to build its download URL -
+# keep them in sync with install.sh's ASSET_NAME logic if you change them
+# here.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # GitHub's macos-latest runners are Apple Silicon (arm64) as of
+          # macos-14. If GitHub ever changes that default, this asset name
+          # and install.sh's detection both need to be revisited together.
+          - os: macos-latest
+            asset_name: facematch-macos-arm64
+          # ubuntu-latest runners are x86_64.
+          - os: ubuntu-latest
+            asset_name: facematch-linux-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libgl1 libglib2.0-0 libsm6 libxext6 libxrender1
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Build binary
+        run: |
+          uv run pyinstaller packaging/pyinstaller/facematch.spec \
+            --distpath packaging/pyinstaller/dist \
+            --workpath packaging/pyinstaller/build \
+            --noconfirm
+
+      - name: Smoke test the binary
+        run: |
+          BIN=packaging/pyinstaller/dist/facematch
+          "$BIN" --help
+          "$BIN" find --help
+          "$BIN" group --help
+          "$BIN" dedupe --help
+
+      - name: Real end-to-end test against the demo photos
+        run: |
+          BIN="$GITHUB_WORKSPACE/packaging/pyinstaller/dist/facematch"
+          mkdir -p /tmp/facematch-ci-scratch
+          cd /tmp/facematch-ci-scratch
+          cp -r "$GITHUB_WORKSPACE/examples/references" ./references
+          "$BIN" build-references
+          test -s reference_embeddings.npz
+          "$BIN" find --sources "$GITHUB_WORKSPACE/examples/archive" --limit 5 --workers 2
+          test -f matched/matches.csv
+          echo "Frozen binary ran real face detection/matching successfully:"
+          cat matched/matches.csv
+
+      - name: Rename binary for release
+        run: |
+          mkdir -p release
+          cp packaging/pyinstaller/dist/facematch "release/${{ matrix.asset_name }}"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: release/${{ matrix.asset_name }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: List assets
+        run: ls -la release-assets
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          generate_release_notes: true

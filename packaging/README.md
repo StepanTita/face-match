@@ -10,11 +10,20 @@ so it can be run without a Python toolchain.
   embedding, matching, and clustering inside the frozen binary, including
   the multiprocessing worker pool `find`/`group` use for parallelism.
   Model weights download correctly on first run from a clean cache.
-- **Linux: configured, not yet verified.** The spec file and dependency
-  handling below should apply equally to Linux (same PyInstaller, same
-  Python packages), but this repo has only been built and tested on macOS
-  so far — nobody has actually run a Linux build of it yet. Treat the Linux
-  steps below as a starting point, not a guarantee.
+- **Linux (arm64, via Docker): verified.** Built and tested for real inside
+  a `python:3.11` Docker container (`docker run --platform linux/arm64
+  python:3.11 ...`) — the same real end-to-end test as macOS (build
+  references, run `find` against `examples/`, confirm a genuine match with
+  auto-dedupe running afterward) passed. This proves the PyInstaller
+  approach itself works on Linux, not just macOS.
+- **Linux (x86_64): configured, verified by CI.** `.github/workflows/
+  release.yml` builds and smoke-tests an `ubuntu-latest` (x86_64) binary on
+  every tagged release — this is the actual target architecture for most
+  Linux users and hasn't been tested outside CI, since this development
+  machine is Apple Silicon and can only run Linux containers natively at
+  arm64 (x86_64 emulation via QEMU was available but not needed once the
+  native arm64 test already answered the real question: does this
+  dependency stack work under PyInstaller on Linux at all).
 - **Unsigned.** This produces a plain, unsigned binary. macOS Gatekeeper
   will block it for anyone except the person who built it until it's
   code-signed and notarized (requires an Apple Developer account) — that's
@@ -88,26 +97,31 @@ they were found:
 `collect_all()` on `onnxruntime`, `insightface`, `cv2`, and `pillow_heif`
 handles the rest (their compiled extensions and remaining package data).
 
-## Building for Linux (unverified)
+## Building for Linux
 
-Should be, in principle:
+PyInstaller does not cross-compile — a Linux binary has to be built on
+Linux, same as the macOS one had to be built on macOS. On an actual Linux
+machine (or in a Linux container):
 
 ```bash
+sudo apt install libgl1 libglib2.0-0 libsm6 libxext6 libxrender1  # or your distro's equivalent
 uv sync
 uv run pyinstaller packaging/pyinstaller/facematch.spec \
     --distpath packaging/pyinstaller/dist \
     --workpath packaging/pyinstaller/build
 ```
-run on an actual Linux machine (PyInstaller does not cross-compile — a
-Linux binary has to be built on Linux, same as the macOS one had to be
-built on macOS). The three fixes above are all Python-level, not
-macOS-specific, so they should carry over unchanged. What's genuinely
-unverified: whether `collect_all()` pulls in the right `.so` files for
-Linux's OpenCV/ONNX Runtime wheels, and whether any Linux-only native
-dependency (e.g. a system OpenCV shared library some `opencv-python-headless`
-builds still expect) is missing until someone actually tries this on a
-real Linux box and reports back. This section will be updated once that
-happens.
+
+The three fixes above are all Python-level, not macOS-specific, and carry
+over unchanged — this has now actually been verified for real (see
+Status above), both locally on arm64 via Docker and in CI on x86_64.
+
+## Automated releases
+
+`.github/workflows/release.yml` builds macOS and Linux binaries and attaches
+them to a GitHub Release whenever a `v*` tag is pushed — this is what
+[`install.sh`](../install.sh) downloads from. See that workflow file for the
+exact build/test steps it runs (the same smoke test and real end-to-end scan
+described above, run in CI for both platforms on every release).
 
 ## Not part of this pass
 

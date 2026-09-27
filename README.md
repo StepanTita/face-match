@@ -67,11 +67,33 @@ this — see [Roadmap](#roadmap).
 
 ## Install
 
-Requires [`uv`](https://docs.astral.sh/uv/) and Python 3.11+.
+macOS or Linux, no Python or toolchain required:
 
 ```bash
-git clone <this repo>
-cd facematch
+curl -fsSL https://raw.githubusercontent.com/StepanTita/face-match/main/install.sh | sh
+```
+
+This downloads a standalone `facematch` binary for your platform into
+`~/.local/bin` (see the script before piping it into `sh` if you'd rather
+review it first — that's always a good habit for a one-line installer).
+If no release has been published yet, or your platform/architecture isn't
+built by the release workflow, it explains that clearly and falls back to
+the build-from-source instructions below instead of failing with a raw
+download error.
+
+The binary is unsigned for now, so macOS Gatekeeper will warn on first run
+(right-click → Open once bypasses it) — see [`packaging/`](packaging/) for
+the full story. Video support additionally needs `ffmpeg`/`ffprobe` on your
+PATH; `install.sh` checks for them and tells you if they're missing.
+
+### Building from source
+
+Requires [`uv`](https://docs.astral.sh/uv/) and Python 3.11+ — this is also
+how the standalone binary itself gets built (see [`packaging/`](packaging/)).
+
+```bash
+git clone https://github.com/StepanTita/face-match.git
+cd face-match
 uv sync
 ```
 
@@ -82,11 +104,6 @@ directory holds your `references/`, `matched/`, and configuration: every
 command resolves its inputs and outputs relative to the current working
 directory, so a given directory is a self-contained "project" for one
 person's search.
-
-A standalone macOS binary (no `uv`/Python setup required) can also be built
-from source — see [`packaging/`](packaging/) — though it's not yet signed
-or distributed anywhere. Linux packaging is configured but not yet built or
-tested on an actual Linux machine.
 
 ## Quickstart
 
@@ -314,8 +331,11 @@ engine without duplicating any matching logic:
 
 ## Roadmap
 
-- Signed, notarized macOS binary and a verified, tested Linux build (see
-  [`packaging/`](packaging/) for the current unsigned/macOS-only state).
+- Signed, notarized macOS binary (see [`packaging/`](packaging/) for the
+  current unsigned state).
+- A first tagged release, so `install.sh` has something to actually
+  download — until then it explains that clearly and points at
+  build-from-source instead.
 - Static ffmpeg bundling and offline-first-run model weights, so the
   packaged binary needs no network or system dependencies at all.
 
