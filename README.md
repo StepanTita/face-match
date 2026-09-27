@@ -1,14 +1,17 @@
 # facematch
 
-Find every photo and video of one person across a giant, messy archive —
-phone backups, cloud takeouts, old external drives — without scrolling
-through any of it by hand.
+Find a specific person, sort everyone, or clean up duplicates — across a
+giant, messy photo/video archive (phone backups, cloud takeouts, old external
+drives) — without scrolling through any of it by hand.
 
-You give it a few reference photos of the person and a path. It streams
+**`find`** takes a few reference photos of someone and a path, then streams
 through everything under that path (folders, zip files, even zips nested
-inside zips), runs face detection and embedding on every image and video it
-finds, and copies out anything that matches. It runs entirely on your
-machine: nothing is uploaded anywhere.
+inside zips) and copies out every match. **`group`** does the same detection
+work with no references at all, sorting every face it finds into per-person
+folders. **`dedupe`** cleans up the result (or any folder you point it at) by
+collapsing exact and near-duplicate copies — and runs automatically after
+both of the above. Everything runs entirely on your machine: nothing is
+uploaded anywhere.
 
 ```bash
 uv run facematch build-references
@@ -17,6 +20,9 @@ uv run facematch find --sources ~/Photos ~/old-icloud-export.zip
 
 ## Features
 
+- **Three real capabilities**: `find` a specific person, `group` everyone by
+  face with no references needed, and `dedupe` any folder of photos/videos —
+  standalone, or automatically after `find`/`group`.
 - **Streaming archive scan** — reads zip entries one at a time instead of
   extracting the whole archive first, so scanning a 200GB cloud export
   doesn't need 200GB of free disk space. Zips inside zips are handled the
@@ -40,9 +46,12 @@ uv run facematch find --sources ~/Photos ~/old-icloud-export.zip
   span decades, with real changes in age and appearance and plenty of
   low-quality scans, so this matters more here than in a typical
   face-verification setup.
-- **Dedupe pass** — the same photo often exists more than once across
-  overlapping backups. `facematch dedupe` groups matches by exact and
-  perceptual hash and files the duplicates aside, safe to re-run anytime.
+- **Dedupe, automatically or standalone** — the same photo often exists more
+  than once across overlapping backups. `facematch dedupe` collapses exact
+  and near-duplicate copies (by content hash and perceptual hash) in any
+  folder you point it at — it runs on its own, or automatically after `find`
+  and `group`, correctly deduping each `group` person-folder independently
+  so a group photo shared by two people is never mistaken for a duplicate.
 - **Fully local** — no network calls, no accounts, no telemetry. See
   [Privacy](#privacy).
 
@@ -148,6 +157,9 @@ uv run facematch find --sources ~/Photos ~/Downloads/icloud_export.zip
 Matches land in `matched/`, get logged to `matched/matches.csv`, and are
 tracked in `checkpoint.sqlite3` as the scan runs. Stop it anytime with
 Ctrl-C — running the same command again resumes instead of starting over.
+When the scan finishes, `matched/` is deduplicated automatically (the same
+photo often exists more than once across overlapping backups) — pass
+`--no-dedupe` if you'd rather see the raw output.
 
 You can also point `find` at sources listed in a config file instead of
 passing them as flags every time:
@@ -167,7 +179,15 @@ uv run facematch group --sources ~/Photos --out ~/Photos-by-person
 
 This clusters every detected face by similarity and writes `person_001/`,
 `person_002/`, ... folders under `--out`, plus an `unclustered/` folder for
-faces that didn't form a confident group.
+faces that didn't form a confident group. Each folder is deduped
+independently and automatically once grouping finishes.
+
+**Already have a folder of photos with duplicates and don't need face
+matching at all?** `dedupe` works standalone on any folder:
+
+```bash
+uv run facematch dedupe --source ~/some/messy/photos
+```
 
 Every flag, default, and example invocation is documented in the CLI
 itself — this README won't repeat it:
@@ -175,6 +195,7 @@ itself — this README won't repeat it:
 ```bash
 uv run facematch find --help
 uv run facematch group --help
+uv run facematch dedupe --help
 uv run facematch --help          # full list of commands
 ```
 
@@ -250,9 +271,9 @@ picture. This is just the map:
 | Command | What it does |
 |---|---|
 | `facematch build-references` | Build `reference_embeddings.npz` from the photos/videos in `references/`. |
-| `facematch find` | Scan your archive and copy out matches. Supports `--background`, `find status`, and `find restart` for job control. |
-| `facematch group` | Cluster every face in your archive by person, no references needed. Supports the same `--background` / `status` / `restart` job control as `find`. |
-| `facematch dedupe` | Collapse duplicate matches (exact + perceptual hash) into one canonical copy each. |
+| `facematch find` | Scan your archive and copy out matches (deduping automatically when done). Supports `--background`, `find status`, and `find restart` for job control. |
+| `facematch group` | Cluster every face in your archive by person, no references needed (deduping each person folder automatically when done). Supports the same `--background` / `status` / `restart` job control as `find`. |
+| `facematch dedupe` | Collapse duplicate files (exact + perceptual hash) in any folder into one canonical copy each — standalone, or (via `--per-subfolder`) the automatic post-processing step behind `find`/`group`. |
 | `facematch backfill-videos` | Copy full video files for matches that only have a saved thumbnail, without re-running detection. |
 
 ## Privacy

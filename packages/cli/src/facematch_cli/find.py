@@ -122,10 +122,17 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
           facematch find status                              check on the most recent run (background or not)
           facematch find status --watch                      keep watching a background run until it finishes
           facematch find restart                              wipe checkpoint + match log, then run again fresh
+          facematch find --no-dedupe                          skip the automatic post-scan dedupe pass
 
         by default, a run RESUMES: anything already recorded in checkpoint.sqlite3
         is skipped instantly. use `facematch find restart` when you want to
         re-scan everything from zero instead.
+
+        when the scan finishes, `facematch dedupe` runs automatically on matched/ -
+        the same photo often exists more than once across overlapping backup
+        sources, so this collapses exact and near-duplicate copies for you (see
+        `facematch dedupe --help`). pass --no-dedupe to skip this and inspect the
+        raw, undeduplicated output instead.
         """)
     parser.add_argument(
         "--sources", nargs="+", default=None,
@@ -153,6 +160,11 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
         "--background", action="store_true",
         help="Start this same scan as a detached background process and return immediately. "
              "Check on it with `facematch find status`.",
+    )
+    parser.add_argument(
+        "--no-dedupe", action="store_true",
+        help="Skip the automatic `facematch dedupe` pass this command normally runs on matched/ "
+             "when it finishes, so you see the raw, undeduplicated output instead.",
     )
     # Internal: set automatically on the detached child process spawned by
     # --background, so it knows to write status.json instead of drawing a
@@ -331,6 +343,14 @@ def run_scan(args: argparse.Namespace) -> None:
 
     log("Find complete.")
 
+    if not args.no_dedupe:
+        from . import dedupe as dedupe_module
+        log("Deduplicating matched/ ...")
+        try:
+            dedupe_module.dedupe_directory(matched_dir, log=log)
+        except Exception as e:
+            log(f"[warn] automatic dedupe failed (matched/ is untouched, your results are fine): {e}")
+
 
 def _child_argv(args: argparse.Namespace, run_id: str) -> list[str]:
     argv = ["find"]
@@ -342,6 +362,8 @@ def _child_argv(args: argparse.Namespace, run_id: str) -> list[str]:
     argv += ["--workers", str(args.workers)]
     if args.retry_errors:
         argv.append("--retry-errors")
+    if args.no_dedupe:
+        argv.append("--no-dedupe")
     argv += ["--_run-id", run_id]
     return argv
 
@@ -359,6 +381,7 @@ def _start_background(args: argparse.Namespace) -> None:
             "limit": args.limit,
             "workers": args.workers,
             "retry_errors": args.retry_errors,
+            "no_dedupe": args.no_dedupe,
         },
         started_at=time.time(),
         cwd=str(paths.project_dir()),

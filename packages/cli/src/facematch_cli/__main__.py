@@ -1,4 +1,4 @@
-"""`facematch` - find people, or group them, across a messy photo/video
+"""`facematch` - find a person, group everyone, or dedupe a photo/video
 archive.
 
 Run from the project directory that holds (or will hold) references/,
@@ -25,16 +25,26 @@ _SUBCOMMANDS = {
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         prog="facematch",
-        description="Find, or group, people across a photo/video archive using face matching.",
+        description="Find a person, group everyone, or dedupe a photo/video archive using face matching.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=dedent("""\
+            three things this tool does:
+              find    - find every photo/video a specific person appears in
+              group   - sort every photo/video into per-person folders, no references needed
+              dedupe  - collapse duplicate photos/videos in any folder (runs automatically
+                        after find/group, or standalone on any folder you point it at)
+
             getting started - finding a specific person:
               facematch build-references              1. build embeddings from references/
-              facematch find                           2. scan an archive and copy matches into matched/
-              facematch dedupe                         3. (optional) collapse duplicate matches
+              facematch find                           2. scan an archive, copy matches into matched/,
+                                                            and dedupe them automatically
 
             getting started - grouping everyone by person (no references needed):
-              facematch group                          scan an archive and sort faces into person_NNN/ folders
+              facematch group                          scan an archive and sort faces into person_NNN/
+                                                            folders, deduped automatically per person
+
+            already have a folder of photos with duplicates and don't need face matching at all:
+              facematch dedupe --source ~/some/messy/photos
 
             every command explains its own flags and shows examples:
               facematch find --help
@@ -43,6 +53,7 @@ def main(argv: list[str] | None = None) -> None:
               facematch group --help
               facematch group status --help
               facematch group restart --help
+              facematch dedupe --help
             """),
     )
     subparsers = parser.add_subparsers(dest="command", required=True)

@@ -109,11 +109,18 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
           facematch group status                                    check on the most recent run (background or not)
           facematch group status --watch                            keep watching a background run until it finishes
           facematch group restart                                   wipe the face-detection checkpoint, then run again fresh
+          facematch group --no-dedupe                               skip the automatic post-scan per-person dedupe pass
 
         by default, a run RESUMES: any file already recorded in
         group_checkpoint.sqlite3 is skipped instantly during detection (its
         already-detected faces are still included in clustering). use
         `facematch group restart` to re-detect everything from zero instead.
+
+        when clustering finishes, `facematch dedupe --per-subfolder` runs
+        automatically on --out - it dedupes each person_NNN/ (and unclustered/)
+        folder independently, never across folders, so a group photo correctly
+        kept in two people's folders is never mistaken for a duplicate (see
+        `facematch dedupe --help`). pass --no-dedupe to skip this.
 
         every detected face ends up somewhere under --out: in a person_NNN/
         folder if it's part of a large-enough cluster, or in unclustered/ if
@@ -158,6 +165,11 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
         "--background", action="store_true",
         help="Start this same scan as a detached background process and return immediately. "
              "Check on it with `facematch group status`.",
+    )
+    parser.add_argument(
+        "--no-dedupe", action="store_true",
+        help="Skip the automatic per-person `facematch dedupe --per-subfolder` pass this command "
+             "normally runs on --out when it finishes, so you see the raw, undeduplicated output instead.",
     )
     # Internal: set automatically on the detached child process spawned by
     # --background, so it knows to write status.json instead of drawing a
@@ -312,6 +324,21 @@ def run_scan(args: argparse.Namespace) -> None:
             f"({result_summary['files_placed']} file placement(s), "
             f"{result_summary['unclustered_files']} file(s) in unclustered/)."
         )
+
+        if not args.no_dedupe:
+            tracker.set_phase("deduping")
+            from . import dedupe as dedupe_module
+            log(f"Deduplicating each folder under {out_dir} independently ...")
+            try:
+                subdirs = sorted(
+                    p for p in out_dir.iterdir()
+                    if p.is_dir() and p.name not in dedupe_module._RESERVED_SUBDIR_NAMES
+                )
+                for sub in subdirs:
+                    dedupe_module.dedupe_directory(sub, log=log)
+            except Exception as e:
+                log(f"[warn] automatic dedupe failed ({out_dir} is untouched, your results are fine): {e}")
+            tracker.set_phase("done")
     except BaseException as e:
         exit_status = "crashed"
         if state is not None:
@@ -426,6 +453,8 @@ def _child_argv(args: argparse.Namespace, run_id: str) -> list[str]:
     argv += ["--workers", str(args.workers)]
     if args.retry_errors:
         argv.append("--retry-errors")
+    if args.no_dedupe:
+        argv.append("--no-dedupe")
     argv += ["--_run-id", run_id]
     return argv
 
@@ -445,6 +474,7 @@ def _start_background(args: argparse.Namespace) -> None:
             "limit": args.limit,
             "workers": args.workers,
             "retry_errors": args.retry_errors,
+            "no_dedupe": args.no_dedupe,
         },
         started_at=time.time(),
         cwd=str(paths.project_dir()),

@@ -64,14 +64,6 @@ def reference_embeddings_path() -> Path:
     return project_dir() / "reference_embeddings.npz"
 
 
-def dedupe_state_path() -> Path:
-    return project_dir() / "dedupe_state.json"
-
-
-def dedupe_report_path() -> Path:
-    return project_dir() / "dedupe_report.csv"
-
-
 def group_checkpoint_path() -> Path:
     return project_dir() / "group_checkpoint.sqlite3"
 
