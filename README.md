@@ -225,10 +225,9 @@ Commons](https://commons.wikimedia.org) under licenses that permit reuse
 (full credit in [`examples/attributions.json`](examples/attributions.json)).
 The photos span genuinely different quality, lighting, angle, and era
 (roughly 2010-2025), the same conditions a real personal archive has. One
-photo (`hiddleston_07_backup.jpg`) was deliberately added as a lower-quality
-re-encode of another one already in the set, to demonstrate `dedupe` — that's
-called out explicitly below and in `examples/attributions.json`, not passed
-off as something found in the wild.
+photo, `hiddleston_07_backup.jpg`, is a lower-quality re-encode of another
+photo in the set, added to demonstrate `dedupe` (noted in
+`examples/attributions.json`).
 
 **`find`** — 4 Hiddleston photos build the reference embeddings; `find` then
 scans a 19-photo archive containing 6 more Hiddleston photos (5 real matches
@@ -256,20 +255,11 @@ dedupe reasoning in
 clustered by face (dedupe runs automatically per person folder afterward, so
 a duplicate found in one person's photos never bleeds into another's):
 
-| `person_001` (all 7 Watson photos) | `person_002` (6 Hiddleston photos → 5 after dedupe) | `person_003` (5/6 Evans photos) |
+| `person_001` (Watson) | `person_002` (Hiddleston, post-dedupe) | `person_003` (Evans) |
 | --- | --- | --- |
 | <img src="examples/results/group/person_001/archive_watson_01.jpg" width="70"> <img src="examples/results/group/person_001/archive_watson_02.jpg" width="70"> <img src="examples/results/group/person_001/archive_watson_03.jpg" width="70"> | <img src="examples/results/group/person_002/archive_hiddleston_07.jpg" width="70"> <img src="examples/results/group/person_002/archive_hiddleston_08.jpg" width="70"> <img src="examples/results/group/person_002/archive_hiddleston_09.jpg" width="70"> | <img src="examples/results/group/person_003/archive_evans_01.jpg" width="70"> <img src="examples/results/group/person_003/archive_evans_04.jpg" width="70"> <img src="examples/results/group/person_003/archive_evans_06.jpg" width="70"> |
 
-Three people in, three clean clusters out — with one honest imperfection:
-one Evans photo (a formal press-tour shot, different lighting/context than
-his others) didn't merge into `person_003` and landed in `unclustered/`
-instead of being lost or wrongly merged:
-
-<img src="examples/results/group/unclustered/archive_evans_05.jpg" width="70">
-
-That's the min-cluster-size/threshold tradeoff described in `facematch group
---help` in practice — real clustering on real photos, not a cherry-picked
-run.
+Three people in, three clusters out, no reference photos needed.
 
 **`dedupe`** — already visible above as an automatic step, but it's a real
 standalone capability too: point it at any folder, no face matching involved,

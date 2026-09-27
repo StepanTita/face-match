@@ -4,9 +4,7 @@ Real photos of three actors, sourced entirely from [Wikimedia
 Commons](https://commons.wikimedia.org) under licenses that permit
 redistribution (CC BY, CC BY-SA, or public domain), used to demonstrate
 `facematch find` and `facematch group` end-to-end against genuinely varied
-photo quality, lighting, angle, and era — not the project maintainer's own
-photos, and not scraped from anywhere that would make redistribution here a
-copyright problem.
+photo quality, lighting, angle, and era.
 
 See the [main README](../README.md#demo) for the demo write-up and results.
 Full per-photo credit is in [`attributions.json`](attributions.json) and the
@@ -20,12 +18,10 @@ reused; do not strip this file out of a derived copy of this data.
 - `archive/` — the "messy archive" `find` and `group` scan: 5 more Hiddleston
   photos (the real matches `find` should discover), plus 6 Chris Evans and 7
   Emma Watson photos (true negatives for `find`, and the other two people
-  `group` needs to cluster separately). `hiddleston_07_backup.jpg` is not a
-  separate source photo — it's `hiddleston_07.jpg` re-encoded at lower JPEG
-  quality, deliberately added to demonstrate `facematch dedupe` collapsing a
-  photo that exists twice from overlapping backup sources (a real, common
-  archive scenario). It's clearly marked as constructed, not organic, in the
-  main README.
+  `group` needs to cluster separately). `hiddleston_07_backup.jpg` is
+  `hiddleston_07.jpg` re-encoded at lower JPEG quality, added to demonstrate
+  `facematch dedupe` collapsing a photo that exists twice from overlapping
+  backup sources — a common real archive scenario.
 - `results/` — the actual, unedited output of running `find` and `group`
   (with their automatic dedupe pass) against the above — see the main
   README's Demo section for the full results, including the dedupe outcome.
