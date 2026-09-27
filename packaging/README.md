@@ -118,10 +118,28 @@ Status above), both locally on arm64 via Docker and in CI on x86_64.
 ## Automated releases
 
 `.github/workflows/release.yml` builds macOS and Linux binaries and attaches
-them to a GitHub Release whenever a `v*` tag is pushed — this is what
-[`install.sh`](../install.sh) downloads from. See that workflow file for the
-exact build/test steps it runs (the same smoke test and real end-to-end scan
-described above, run in CI for both platforms on every release).
+them to a GitHub Release — this is what [`install.sh`](../install.sh)
+downloads from. See that workflow file for the exact build/test steps it
+runs (the same smoke test and real end-to-end scan described above, run in
+CI for both platforms on every release).
+
+It runs two ways:
+
+- **Automatically**, whenever a `v*` tag is pushed:
+  ```bash
+  git tag -a v0.1.1 -m "v0.1.1: ..."
+  git push origin v0.1.1
+  ```
+- **Manually**, without pushing a tag first — useful for re-cutting a release
+  after fixing a failed build, or releasing from a branch:
+  - **GitHub UI**: Actions tab → "Release" workflow → "Run workflow" →
+    enter the version tag (e.g. `v0.1.1`) → Run workflow.
+  - **`gh` CLI**:
+    ```bash
+    gh workflow run release.yml -f tag=v0.1.1
+    ```
+  A manual run creates the `v0.1.1` tag automatically if it doesn't already
+  exist yet, pointing at whichever branch/commit the workflow ran against.
 
 ## Not part of this pass
 

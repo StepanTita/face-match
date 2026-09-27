@@ -13,6 +13,15 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: >-
+          Version tag to release (e.g. v0.1.1). Created automatically if it
+          doesn't already exist, pointing at the branch/commit this workflow
+          runs against.
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -98,8 +107,18 @@ jobs:
       - name: List assets
         run: ls -la release-assets
 
+      - name: Determine release tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.tag.outputs.tag }}
           files: release-assets/*
           generate_release_notes: true
