@@ -83,8 +83,10 @@ command resolves its inputs and outputs relative to the current working
 directory, so a given directory is a self-contained "project" for one
 person's search.
 
-Packaged, double-clickable binaries for macOS and Linux (no `uv`/Python
-setup required) are planned but not available yet.
+A standalone macOS binary (no `uv`/Python setup required) can also be built
+from source — see [`packaging/`](packaging/) — though it's not yet signed
+or distributed anywhere. Linux packaging is configured but not yet built or
+tested on an actual Linux machine.
 
 ## Quickstart
 
@@ -312,8 +314,10 @@ engine without duplicating any matching logic:
 
 ## Roadmap
 
-- Packaged, signed binaries for macOS and Linux, so running this doesn't
-  require a Python toolchain.
+- Signed, notarized macOS binary and a verified, tested Linux build (see
+  [`packaging/`](packaging/) for the current unsigned/macOS-only state).
+- Static ffmpeg bundling and offline-first-run model weights, so the
+  packaged binary needs no network or system dependencies at all.
 
 ## Contributing
 

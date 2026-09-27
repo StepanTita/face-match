@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import io
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -11,6 +12,40 @@ import numpy as np
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".bmp", ".tiff", ".tif", ".webp"}
 VIDEO_EXTS = {".mov", ".mp4", ".m4v", ".avi", ".mkv", ".3gp"}
+
+_FFMPEG_CHECKED = False
+
+
+class FFmpegNotFoundError(RuntimeError):
+    """Raised when ffmpeg/ffprobe are needed (a video was encountered) but not on PATH."""
+
+
+def ffmpeg_available() -> bool:
+    """Cheap presence check for ffmpeg/ffprobe, no caching (safe to call once at CLI startup)."""
+    return shutil.which("ffmpeg") is not None and shutil.which("ffprobe") is not None
+
+
+def require_ffmpeg() -> None:
+    """Check ffmpeg/ffprobe are on PATH, once per process. Raises a clear,
+    actionable error instead of letting a missing binary fail silently deep
+    inside a subprocess call (every call below already swallows subprocess
+    errors so a scan doesn't die on one bad file - this is the one check
+    that should NOT be swallowed, since it means every video will fail)."""
+    global _FFMPEG_CHECKED
+    if _FFMPEG_CHECKED:
+        return
+    missing = [name for name in ("ffmpeg", "ffprobe") if shutil.which(name) is None]
+    if missing:
+        raise FFmpegNotFoundError(
+            f"{' and '.join(missing)} not found on PATH, but the archive contains "
+            "video files that need it for frame sampling.\n"
+            "Install it, then try again:\n"
+            "  macOS:   brew install ffmpeg\n"
+            "  Ubuntu/Debian: sudo apt install ffmpeg\n"
+            "  Fedora:  sudo dnf install ffmpeg\n"
+            "Or re-run against image files only if you don't need video support."
+        )
+    _FFMPEG_CHECKED = True
 
 
 def register_heif_opener():
@@ -52,6 +87,7 @@ def decode_image_path(path: str) -> np.ndarray | None:
 
 def extract_frames_ffmpeg(video_path: str, out_dir: str, fps: float = 0.7, max_frames: int | None = None) -> list[str]:
     """Sample frames from a video at ~fps frames/sec using ffmpeg. Returns list of jpg paths."""
+    require_ffmpeg()
     os.makedirs(out_dir, exist_ok=True)
     pattern = os.path.join(out_dir, "frame_%05d.jpg")
     cmd = [
@@ -73,6 +109,7 @@ def extract_frames_ffmpeg(video_path: str, out_dir: str, fps: float = 0.7, max_f
 def extract_video_timestamps_ffmpeg(video_path: str, out_dir: str, n_samples: int = 8) -> list[tuple[str, float]]:
     """Sample n_samples frames evenly spread through the video's duration.
     Returns list of (jpg_path, timestamp_seconds)."""
+    require_ffmpeg()
     os.makedirs(out_dir, exist_ok=True)
     duration = get_video_duration(video_path)
     if duration is None or duration <= 0:

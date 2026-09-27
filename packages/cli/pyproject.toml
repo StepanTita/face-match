@@ -21,3 +21,6 @@ packages = ["src/facematch_cli"]
 
 [tool.uv.sources]
 facematch-core = { workspace = true }
+
+[dependency-groups]
+dev = ["pyinstaller>=6.0"]

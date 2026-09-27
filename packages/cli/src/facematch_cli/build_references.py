@@ -17,7 +17,13 @@ from pathlib import Path
 from textwrap import dedent
 
 import numpy as np
-from facematch_core.decode import IMAGE_EXTS, VIDEO_EXTS, decode_image_path, extract_video_timestamps_ffmpeg
+from facematch_core.decode import (
+    IMAGE_EXTS,
+    VIDEO_EXTS,
+    decode_image_path,
+    extract_video_timestamps_ffmpeg,
+    ffmpeg_available,
+)
 from facematch_core.match import largest_face_embedding
 from tqdm import tqdm
 
@@ -51,6 +57,14 @@ def run(args: argparse.Namespace) -> None:
 
     files = sorted(p for p in references_dir.iterdir() if p.is_file() and not p.name.startswith("."))
     print(f"Found {len(files)} files in {references_dir}")
+
+    if any(p.suffix.lower() in VIDEO_EXTS for p in files) and not ffmpeg_available():
+        print(
+            "WARNING: ffmpeg/ffprobe not found on PATH. Video references will "
+            "fail with an error; images are unaffected. Install ffmpeg (e.g. "
+            "`brew install ffmpeg` on macOS) to support video references.",
+            file=sys.stderr,
+        )
 
     for path in tqdm(files, unit="file", desc="build-references"):
         ext = path.suffix.lower()

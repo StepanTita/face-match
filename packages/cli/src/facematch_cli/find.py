@@ -52,6 +52,7 @@ import numpy as np
 from tqdm import tqdm
 
 from facematch_core.checkpoint import Checkpoint
+from facematch_core.decode import ffmpeg_available
 from facematch_core.events import ProgressTracker
 from facematch_core.match import DEFAULT_THRESHOLD
 from facematch_core.sources import enumerate_source
@@ -223,6 +224,14 @@ def run_scan(args: argparse.Namespace) -> None:
     if not sources:
         print("ERROR: no sources given. Pass --sources, or create sources.local.json (see sources.example.json).")
         sys.exit(1)
+
+    if not ffmpeg_available():
+        print(
+            "WARNING: ffmpeg/ffprobe not found on PATH. Video files in your "
+            "sources will fail with an error; images are unaffected. Install "
+            "ffmpeg (e.g. `brew install ffmpeg` on macOS) to support video.",
+            file=sys.stderr,
+        )
 
     if args.background and not args._run_id:
         _start_background(args)

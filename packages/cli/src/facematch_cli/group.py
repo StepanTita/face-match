@@ -43,6 +43,7 @@ from textwrap import dedent
 import numpy as np
 from tqdm import tqdm
 
+from facematch_core.decode import ffmpeg_available
 from facematch_core.cluster import (
     DEFAULT_MERGE_THRESHOLD,
     DEFAULT_MIN_CLUSTER_SIZE,
@@ -232,6 +233,14 @@ def run_scan(args: argparse.Namespace) -> None:
     if not sources:
         print("ERROR: no sources given. Pass --sources, or create sources.local.json (see sources.example.json).")
         sys.exit(1)
+
+    if not ffmpeg_available():
+        print(
+            "WARNING: ffmpeg/ffprobe not found on PATH. Video files in your "
+            "sources will fail with an error; images are unaffected. Install "
+            "ffmpeg (e.g. `brew install ffmpeg` on macOS) to support video.",
+            file=sys.stderr,
+        )
 
     if args.background and not args._run_id:
         _start_background(args)
