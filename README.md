@@ -218,49 +218,73 @@ uv run facematch --help          # full list of commands
 
 ## Demo
 
-To show both commands working end-to-end without using anyone's private
+To show all three commands working end-to-end without using anyone's private
 photos, [`examples/`](examples/) has real photos of three actors — Tom
 Hiddleston, Chris Evans, and Emma Watson — sourced entirely from [Wikimedia
 Commons](https://commons.wikimedia.org) under licenses that permit reuse
 (full credit in [`examples/attributions.json`](examples/attributions.json)).
 The photos span genuinely different quality, lighting, angle, and era
-(roughly 2010-2025), the same conditions a real personal archive has.
+(roughly 2010-2025), the same conditions a real personal archive has. One
+photo (`hiddleston_07_backup.jpg`) was deliberately added as a lower-quality
+re-encode of another one already in the set, to demonstrate `dedupe` — that's
+called out explicitly below and in `examples/attributions.json`, not passed
+off as something found in the wild.
 
 **`find`** — 4 Hiddleston photos build the reference embeddings; `find` then
-scans an 18-photo archive containing 5 more Hiddleston photos (real matches)
-plus 6 Evans and 7 Watson photos (true negatives):
+scans a 19-photo archive containing 6 more Hiddleston photos (5 real matches
+plus the deliberate duplicate) alongside 6 Evans and 7 Watson photos (true
+negatives):
 
 <table>
 <tr><td align="center" width="20%"><b>references/</b><br>(4 photos)</td>
-<td align="center">→ <code>facematch find</code> on the 18-photo archive →</td></tr>
+<td align="center">→ <code>facematch find</code> on the 19-photo archive →</td></tr>
 </table>
 
-| Matched (5/5 real Hiddleston photos found) |
-| --- |
-| <img src="examples/results/find/matched/hiddleston_07.jpg" width="110"> <img src="examples/results/find/matched/hiddleston_08.jpg" width="110"> <img src="examples/results/find/matched/hiddleston_09.jpg" width="110"> <img src="examples/results/find/matched/hiddleston_10.jpg" width="110"> <img src="examples/results/find/matched/hiddleston_11.jpg" width="110"> |
+| Matched (6/6 real Hiddleston photos found) | Auto-deduped afterward |
+| --- | --- |
+| <img src="examples/results/find/matched/archive_hiddleston_07.jpg" width="100"> <img src="examples/results/find/matched/archive_hiddleston_08.jpg" width="100"> <img src="examples/results/find/matched/archive_hiddleston_09.jpg" width="100"> <img src="examples/results/find/matched/archive_hiddleston_10.jpg" width="100"> <img src="examples/results/find/matched/archive_hiddleston_11.jpg" width="100"> | `hiddleston_07_backup.jpg` — a lower-quality re-encode of `hiddleston_07.jpg` — matched independently (0.765 similarity) then got moved into <code>matched/duplicates/g00001/</code> by `find`'s automatic dedupe pass, leaving the higher-confidence original as the one canonical copy. |
 
-All 5 real Hiddleston photos in the archive were found (similarity
-0.59–0.77), and all 13 Evans/Watson photos were correctly rejected — the
-highest false-positive score was 0.155, well under the 0.38 threshold. Full
-scores in [`examples/results/find/matches.csv`](examples/results/find/matches.csv).
+All 6 Hiddleston photos in the archive were found (similarity 0.59–0.77,
+including the deliberate duplicate), and all 13 Evans/Watson photos were
+correctly rejected — the highest false-positive score was 0.155, well under
+the 0.38 threshold. Full scores in
+[`examples/results/find/matched/matches.csv`](examples/results/find/matched/matches.csv), full
+dedupe reasoning in
+[`examples/results/find/matched/dedupe_report.csv`](examples/results/find/matched/dedupe_report.csv).
 
-**`group`** — no reference photos at all, just the same 18-photo archive
-clustered by face:
+**`group`** — no reference photos at all, just the same 19-photo archive
+clustered by face (dedupe runs automatically per person folder afterward, so
+a duplicate found in one person's photos never bleeds into another's):
 
-| `person_001` (all 7 Watson photos) | `person_002` (all 5 Hiddleston photos) | `person_003` (5/6 Evans photos) |
+| `person_001` (all 7 Watson photos) | `person_002` (6 Hiddleston photos → 5 after dedupe) | `person_003` (5/6 Evans photos) |
 | --- | --- | --- |
-| <img src="examples/results/group/person_001/watson_01.jpg" width="70"> <img src="examples/results/group/person_001/watson_02.jpg" width="70"> <img src="examples/results/group/person_001/watson_03.jpg" width="70"> | <img src="examples/results/group/person_002/hiddleston_07.jpg" width="70"> <img src="examples/results/group/person_002/hiddleston_08.jpg" width="70"> <img src="examples/results/group/person_002/hiddleston_09.jpg" width="70"> | <img src="examples/results/group/person_003/evans_01.jpg" width="70"> <img src="examples/results/group/person_003/evans_04.jpg" width="70"> <img src="examples/results/group/person_003/evans_06.jpg" width="70"> |
+| <img src="examples/results/group/person_001/archive_watson_01.jpg" width="70"> <img src="examples/results/group/person_001/archive_watson_02.jpg" width="70"> <img src="examples/results/group/person_001/archive_watson_03.jpg" width="70"> | <img src="examples/results/group/person_002/archive_hiddleston_07.jpg" width="70"> <img src="examples/results/group/person_002/archive_hiddleston_08.jpg" width="70"> <img src="examples/results/group/person_002/archive_hiddleston_09.jpg" width="70"> | <img src="examples/results/group/person_003/archive_evans_01.jpg" width="70"> <img src="examples/results/group/person_003/archive_evans_04.jpg" width="70"> <img src="examples/results/group/person_003/archive_evans_06.jpg" width="70"> |
 
 Three people in, three clean clusters out — with one honest imperfection:
 one Evans photo (a formal press-tour shot, different lighting/context than
 his others) didn't merge into `person_003` and landed in `unclustered/`
 instead of being lost or wrongly merged:
 
-<img src="examples/results/group/unclustered/evans_05.jpg" width="70">
+<img src="examples/results/group/unclustered/archive_evans_05.jpg" width="70">
 
 That's the min-cluster-size/threshold tradeoff described in `facematch group
 --help` in practice — real clustering on real photos, not a cherry-picked
 run.
+
+**`dedupe`** — already visible above as an automatic step, but it's a real
+standalone capability too: point it at any folder, no face matching involved,
+and it collapses byte-identical or perceptually near-identical files (the
+same photo re-exported at different quality by overlapping backup sources —
+exactly what `hiddleston_07_backup.jpg` simulates) down to one canonical copy:
+
+```bash
+facematch dedupe --source ~/some/messy/photo/folder
+```
+
+`group`'s output specifically needs `--per-subfolder` dedupe (which `facematch
+group` already applies automatically) so that the same photo legitimately
+appearing in two different people's folders — a group photo with both people
+in it — is never mistaken for a duplicate and collapsed away.
 
 ## Commands
 

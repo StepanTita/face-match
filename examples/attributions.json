@@ -2,7 +2,7 @@
   {
     "person": "evans",
     "split": "archive",
-    "local_path": "archive/evans/evans_01.jpg",
+    "local_path": "archive/evans_01.jpg",
     "title": "File:Chris Evans - The Losers film panel - WonderCon 2010.jpg",
     "commons_url": "https://commons.wikimedia.org/wiki/File%3AChris_Evans_-_The_Losers_film_panel_-_WonderCon_2010.jpg",
     "license": "CC BY-SA 3.0",
@@ -14,7 +14,7 @@
   {
     "person": "evans",
     "split": "archive",
-    "local_path": "archive/evans/evans_04.jpg",
+    "local_path": "archive/evans_04.jpg",
     "title": "File:Chris Evans by Gage Skidmore.jpg",
     "commons_url": "https://commons.wikimedia.org/wiki/File%3AChris_Evans_by_Gage_Skidmore.jpg",
     "license": "CC BY-SA 3.0",
@@ -26,7 +26,7 @@
   {
     "person": "evans",
     "split": "archive",
-    "local_path": "archive/evans/evans_05.jpg",
+    "local_path": "archive/evans_05.jpg",
     "title": "File:Chris Evans in Dec 6, 2016.jpg",
     "commons_url": "https://commons.wikimedia.org/wiki/File%3AChris_Evans_in_Dec_6%2C_2016.jpg",
     "license": "CC BY 2.0",
@@ -38,7 +38,7 @@
   {
     "person": "evans",
     "split": "archive",
-    "local_path": "archive/evans/evans_06.jpg",
+    "local_path": "archive/evans_06.jpg",
     "title": "File:Chris Evans in 2019.jpg",
     "commons_url": "https://commons.wikimedia.org/wiki/File%3AChris_Evans_in_2019.jpg",
     "license": "Public domain",
@@ -50,7 +50,7 @@
   {
     "person": "evans",
     "split": "archive",
-    "local_path": "archive/evans/evans_07.jpg",
+    "local_path": "archive/evans_07.jpg",
     "title": "File:Chris Evans 2020 (cropped).jpg",
     "commons_url": "https://commons.wikimedia.org/wiki/File%3AChris_Evans_2020_%28cropped%29.jpg",
     "license": "Public domain",
@@ -62,7 +62,7 @@
   {
     "person": "evans",
     "split": "archive",
-    "local_path": "archive/evans/evans_09.jpg",
+    "local_path": "archive/evans_09.jpg",
     "title": "File:Chris Evans at the 2025 Toronto International Film Festival (cropped).jpg",
     "commons_url": "https://commons.wikimedia.org/wiki/File%3AChris_Evans_at_the_2025_Toronto_International_Film_Festival_%28cropped%29.jpg",
     "license": "CC BY-SA 4.0",
@@ -74,7 +74,7 @@
   {
     "person": "hiddleston",
     "split": "archive",
-    "local_path": "archive/hiddleston/hiddleston_07.jpg",
+    "local_path": "archive/hiddleston_07.jpg",
     "title": "File:Tom Hiddleston (27992871594).jpg",
     "commons_url": "https://commons.wikimedia.org/wiki/File%3ATom_Hiddleston_%2827992871594%29.jpg",
     "license": "CC BY-SA 2.0",
@@ -86,7 +86,20 @@
   {
     "person": "hiddleston",
     "split": "archive",
-    "local_path": "archive/hiddleston/hiddleston_08.jpg",
+    "local_path": "archive/hiddleston_07_backup.jpg",
+    "title": "File:Tom Hiddleston (27992871594).jpg",
+    "commons_url": "https://commons.wikimedia.org/wiki/File%3ATom_Hiddleston_%2827992871594%29.jpg",
+    "license": "CC BY-SA 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0",
+    "artist": "Gage Skidmore from Peoria, AZ, United States of America",
+    "note": "Not a separate source photo - this is hiddleston_07.jpg re-encoded at lower JPEG quality, deliberately added to demonstrate facematch dedupe (see main README's Demo section). Same license/attribution applies.",
+    "orig_w": 5760,
+    "orig_h": 3840
+  },
+  {
+    "person": "hiddleston",
+    "split": "archive",
+    "local_path": "archive/hiddleston_08.jpg",
     "title": "File:Tom Hiddleston (48468924186).jpg",
     "commons_url": "https://commons.wikimedia.org/wiki/File%3ATom_Hiddleston_%2848468924186%29.jpg",
     "license": "CC BY-SA 2.0",
@@ -98,7 +111,7 @@
   {
     "person": "hiddleston",
     "split": "archive",
-    "local_path": "archive/hiddleston/hiddleston_09.jpg",
+    "local_path": "archive/hiddleston_09.jpg",
     "title": "File:Tom Hiddleston (48468934866).jpg",
     "commons_url": "https://commons.wikimedia.org/wiki/File%3ATom_Hiddleston_%2848468934866%29.jpg",
     "license": "CC BY-SA 2.0",
@@ -110,7 +123,7 @@
   {
     "person": "hiddleston",
     "split": "archive",
-    "local_path": "archive/hiddleston/hiddleston_10.jpg",
+    "local_path": "archive/hiddleston_10.jpg",
     "title": "File:Tom Hiddleston (48468955071).jpg",
     "commons_url": "https://commons.wikimedia.org/wiki/File%3ATom_Hiddleston_%2848468955071%29.jpg",
     "license": "CC BY-SA 2.0",
@@ -122,7 +135,7 @@
   {
     "person": "hiddleston",
     "split": "archive",
-    "local_path": "archive/hiddleston/hiddleston_11.jpg",
+    "local_path": "archive/hiddleston_11.jpg",
     "title": "File:Tom Hiddleston (48468962561) (cropped).jpg",
     "commons_url": "https://commons.wikimedia.org/wiki/File%3ATom_Hiddleston_%2848468962561%29_%28cropped%29.jpg",
     "license": "CC BY-SA 2.0",
@@ -134,7 +147,7 @@
   {
     "person": "hiddleston",
     "split": "references",
-    "local_path": "references/hiddleston/hiddleston_01.jpg",
+    "local_path": "references/hiddleston_01.jpg",
     "title": "File:Tom Hiddleston (Avengers Red Carpet).jpg",
     "commons_url": "https://commons.wikimedia.org/wiki/File%3ATom_Hiddleston_%28Avengers_Red_Carpet%29.jpg",
     "license": "CC BY-SA 3.0",
@@ -146,7 +159,7 @@
   {
     "person": "hiddleston",
     "split": "references",
-    "local_path": "references/hiddleston/hiddleston_02.jpg",
+    "local_path": "references/hiddleston_02.jpg",
     "title": "File:Tom Hiddleston Out of Darkness.jpg",
     "commons_url": "https://commons.wikimedia.org/wiki/File%3ATom_Hiddleston_Out_of_Darkness.jpg",
     "license": "CC BY 3.0",
@@ -158,7 +171,7 @@
   {
     "person": "hiddleston",
     "split": "references",
-    "local_path": "references/hiddleston/hiddleston_05.jpg",
+    "local_path": "references/hiddleston_05.jpg",
     "title": "File:Tom Hiddleston (9404809849).jpg",
     "commons_url": "https://commons.wikimedia.org/wiki/File%3ATom_Hiddleston_%289404809849%29.jpg",
     "license": "CC BY-SA 2.0",
@@ -170,7 +183,7 @@
   {
     "person": "hiddleston",
     "split": "references",
-    "local_path": "references/hiddleston/hiddleston_06.jpg",
+    "local_path": "references/hiddleston_06.jpg",
     "title": "File:Tom Hiddleston Jaguar ad February 2014.jpg",
     "commons_url": "https://commons.wikimedia.org/wiki/File%3ATom_Hiddleston_Jaguar_ad_February_2014.jpg",
     "license": "CC BY-SA 2.0",
@@ -182,7 +195,7 @@
   {
     "person": "watson",
     "split": "archive",
-    "local_path": "archive/watson/watson_01.jpg",
+    "local_path": "archive/watson_01.jpg",
     "title": "File:EmmaWatsonNov2010-2.jpg",
     "commons_url": "https://commons.wikimedia.org/wiki/File%3AEmmaWatsonNov2010-2.jpg",
     "license": "CC BY 2.0",
@@ -194,7 +207,7 @@
   {
     "person": "watson",
     "split": "archive",
-    "local_path": "archive/watson/watson_02.jpg",
+    "local_path": "archive/watson_02.jpg",
     "title": "File:Emma Watson 2012 Shankbone (cropped).JPG",
     "commons_url": "https://commons.wikimedia.org/wiki/File%3AEmma_Watson_2012_Shankbone_%28cropped%29.JPG",
     "license": "CC BY 3.0",
@@ -206,7 +219,7 @@
   {
     "person": "watson",
     "split": "archive",
-    "local_path": "archive/watson/watson_03.jpg",
+    "local_path": "archive/watson_03.jpg",
     "title": "File:Emma Watson, 2012.jpg",
     "commons_url": "https://commons.wikimedia.org/wiki/File%3AEmma_Watson%2C_2012.jpg",
     "license": "CC BY 2.0",
@@ -218,7 +231,7 @@
   {
     "person": "watson",
     "split": "archive",
-    "local_path": "archive/watson/watson_04.jpg",
+    "local_path": "archive/watson_04.jpg",
     "title": "File:Emma Watson 2, 2013.jpg",
     "commons_url": "https://commons.wikimedia.org/wiki/File%3AEmma_Watson_2%2C_2013.jpg",
     "license": "CC BY-SA 3.0",
@@ -230,7 +243,7 @@
   {
     "person": "watson",
     "split": "archive",
-    "local_path": "archive/watson/watson_06.jpg",
+    "local_path": "archive/watson_06.jpg",
     "title": "File:Emma Watson GoF Premiere Crop.jpg",
     "commons_url": "https://commons.wikimedia.org/wiki/File%3AEmma_Watson_GoF_Premiere_Crop.jpg",
     "license": "CC BY-SA 3.0",
@@ -242,7 +255,7 @@
   {
     "person": "watson",
     "split": "archive",
-    "local_path": "archive/watson/watson_07.jpg",
+    "local_path": "archive/watson_07.jpg",
     "title": "File:Emma Watson interview in 2017 (cropped).jpg",
     "commons_url": "https://commons.wikimedia.org/wiki/File%3AEmma_Watson_interview_in_2017_%28cropped%29.jpg",
     "license": "CC BY 3.0",
@@ -254,7 +267,7 @@
   {
     "person": "watson",
     "split": "archive",
-    "local_path": "archive/watson/watson_08.jpg",
+    "local_path": "archive/watson_08.jpg",
     "title": "File:Emma Watson ONU 2017.jpg",
     "commons_url": "https://commons.wikimedia.org/wiki/File%3AEmma_Watson_ONU_2017.jpg",
     "license": "CC BY 3.0",

@@ -1,0 +1,3 @@
+group_id,role,filename,confidence,source,current_path
+g00001,canonical,archive_hiddleston_07.jpg,0.7688,archive/hiddleston_07.jpg,/private/tmp/facematch-demo-regen/matched/archive_hiddleston_07.jpg
+g00001,duplicate,archive_hiddleston_07_backup.jpg,0.765,archive/hiddleston_07_backup.jpg,/private/tmp/facematch-demo-regen/matched/duplicates/g00001/archive_hiddleston_07_backup.jpg
