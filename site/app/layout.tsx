@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
+import { Zilla_Slab, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const hankenGrotesk = Hanken_Grotesk({
-  variable: "--font-hanken",
+const zillaSlab = Zilla_Slab({
+  variable: "--font-zilla",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["500", "600", "700"],
 });
 
 const jetBrainsMono = JetBrains_Mono({
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${hankenGrotesk.variable} ${jetBrainsMono.variable}`}>
+    <html lang="en" className={`${zillaSlab.variable} ${jetBrainsMono.variable}`}>
       <body>{children}</body>
     </html>
   );

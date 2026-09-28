@@ -1,21 +1,24 @@
 :root {
-  --bg: #0a0c0e;
-  --bg-raised: #121519;
-  --surface: #171b20;
-  --border: #262c33;
-  --border-strong: #363e47;
-  --text: #eceef0;
-  --text-dim: #a3abb5;
-  --text-faint: #6b7280;
-  --accent: #f2b84b;
-  --accent-dim: #7a5f28;
-  --accent-ink: #1a1305;
-  --ok: #52d17c;
-  --cluster-a: #f2b84b;
-  --cluster-b: #6ea8fe;
-  --cluster-c: #52d17c;
-  --radius: 7px;
-  color-scheme: dark;
+  --bg: #fff8ed;
+  --bg-raised: #fffdf8;
+  --surface: #fffdf8;
+  --border: #e8dcc8;
+  --border-strong: #d8c7a8;
+  --text: #30251b;
+  --text-dim: #6b5847;
+  --text-faint: #9c8a74;
+  --accent: #ad4f14;
+  --accent-hover: #93400f;
+  --accent-soft: rgba(173, 79, 20, 0.08);
+  --ink-panel: #3d281d;
+  --ink-panel-text: #fff8ed;
+  --ink-panel-accent: #f09a57;
+  --ok: #4b6b4f;
+  --cluster-a: #ad4f14;
+  --cluster-b: #2f5d8a;
+  --cluster-c: #4b6b4f;
+  --radius: 4px;
+  color-scheme: light;
 }
 
 * {
@@ -26,20 +29,30 @@ html,
 body {
   margin: 0;
   padding: 0;
+  background: var(--bg);
 }
 
 body {
-  background: var(--bg);
   color: var(--text);
-  font-family: var(--font-hanken), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 16px;
-  line-height: 1.55;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   padding-inline: 24px;
 }
 
 a {
   color: inherit;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--ink-panel-text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .mono {
@@ -56,6 +69,7 @@ h2,
 h3 {
   text-wrap: balance;
   margin: 0;
+  font-family: var(--font-zilla), Georgia, serif;
   font-weight: 700;
 }
 
@@ -64,10 +78,7 @@ p {
 }
 
 .eyebrow {
-  font-family: var(--font-jetbrains), monospace;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 12.5px;
   color: var(--accent);
   display: flex;
   align-items: center;
@@ -85,10 +96,18 @@ p {
 /* ---------- photo tile: an abstract stand-in for a photo, never a real image ---------- */
 .photo {
   position: relative;
-  border-radius: 6px;
+  border-radius: 3px;
   overflow: hidden;
-  background: #23282f;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: #ede1cc;
+  border: 1px solid rgba(48, 37, 27, 0.06);
+}
+.photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
 }
 .photo::after {
   content: "";
@@ -99,25 +118,28 @@ p {
   aspect-ratio: 1;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  background: radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0) 62%), #3a4048;
+  background: radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 62%), #b8a58c;
+}
+.photo:has(img)::after {
+  content: none;
 }
 .photo:nth-child(6n + 1) {
-  background: #23282f;
+  background: #ede1cc;
 }
 .photo:nth-child(6n + 2) {
-  background: #2a2420;
+  background: #e3d3ba;
 }
 .photo:nth-child(6n + 3) {
-  background: #1f2a2c;
+  background: #dccdb4;
 }
 .photo:nth-child(6n + 4) {
-  background: #262331;
+  background: #e8d9c4;
 }
 .photo:nth-child(6n + 5) {
-  background: #22282a;
+  background: #d9cab0;
 }
 .photo:nth-child(6n + 6) {
-  background: #2b2620;
+  background: #efe3cf;
 }
 
 /* bounding-box corner motif — echoes the boxes the tool draws around real matches */
@@ -174,9 +196,9 @@ nav {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-family: var(--font-jetbrains), monospace;
-  font-weight: 600;
-  font-size: 16px;
+  font-family: var(--font-zilla), Georgia, serif;
+  font-weight: 700;
+  font-size: 17px;
 }
 .logo-mark {
   width: 22px;
@@ -233,24 +255,18 @@ nav {
 }
 .hero h1 {
   font-size: clamp(32px, 5.2vw, 58px);
-  line-height: 1.06;
-  letter-spacing: -0.02em;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
   margin-top: 18px;
   max-width: 15ch;
   margin-inline: auto;
 }
-.hero h1 .hl {
-  color: var(--accent);
-}
 .hero-sub {
   margin: 16px auto 0;
-  font-size: 17px;
+  font-size: 16px;
   color: var(--text-dim);
   max-width: 48ch;
-}
-.accent-word {
-  color: var(--accent);
-  font-weight: 700;
+  line-height: 1.65;
 }
 .hero-actions {
   display: flex;
@@ -278,10 +294,10 @@ nav {
 }
 .btn-primary {
   background: var(--accent);
-  color: var(--accent-ink);
+  color: var(--ink-panel-text);
 }
 .btn-primary:hover {
-  background: #f7c565;
+  background: var(--accent-hover);
 }
 .btn-ghost {
   background: transparent;
@@ -298,15 +314,14 @@ nav {
   gap: 8px;
   margin-top: 18px;
   padding: 9px 16px;
-  background: var(--bg-raised);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  font-family: var(--font-jetbrains), monospace;
+  background: var(--ink-panel);
+  border: 1px solid var(--ink-panel);
+  border-radius: var(--radius);
   font-size: 13px;
-  color: var(--text-dim);
+  color: var(--ink-panel-text);
 }
 .cmd-pill .accent {
-  color: var(--accent);
+  color: var(--ink-panel-accent);
 }
 
 /* ---------- chaos → order diagram ---------- */
@@ -329,16 +344,13 @@ nav {
 .flow-panel {
   background: var(--bg-raised);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius);
   padding: 18px;
   text-align: left;
 }
 .flow-label {
-  font-family: var(--font-jetbrains), monospace;
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text-faint);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   margin-bottom: 12px;
 }
 .flow-arrow {
@@ -389,8 +401,7 @@ nav {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: var(--font-jetbrains), monospace;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--text-dim);
   margin-bottom: 8px;
 }
@@ -425,7 +436,7 @@ section {
 }
 .section-head h2 {
   font-size: clamp(24px, 3vw, 32px);
-  letter-spacing: -0.015em;
+  letter-spacing: -0.005em;
   margin-top: 12px;
 }
 
@@ -443,7 +454,7 @@ section {
 .cap {
   background: var(--bg-raised);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius);
   padding: 22px;
   display: flex;
   flex-direction: column;
@@ -460,7 +471,6 @@ section {
   font-size: 17px;
 }
 .cap .result {
-  font-family: var(--font-jetbrains), monospace;
   font-size: 12.5px;
   color: var(--ok);
 }
@@ -549,7 +559,7 @@ section {
   gap: 1px;
   background: var(--border);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius);
   overflow: hidden;
   margin-bottom: 32px;
 }
@@ -564,9 +574,8 @@ section {
   text-align: center;
 }
 .stat .n {
-  font-family: var(--font-jetbrains), monospace;
   font-size: 28px;
-  font-weight: 600;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--accent);
 }
@@ -613,9 +622,9 @@ section {
 /* ---------- pricing / buy ---------- */
 .price-card {
   background: var(--bg-raised);
-  border: 1px solid var(--accent-dim);
-  background: linear-gradient(180deg, rgba(242, 184, 75, 0.06), transparent 40%), var(--bg-raised);
-  border-radius: 12px;
+  border: 1px solid var(--border-strong);
+  border-top: 3px solid var(--accent);
+  border-radius: var(--radius);
   padding: 30px;
   max-width: 440px;
   margin-inline: auto;
@@ -627,18 +636,17 @@ section {
   justify-content: space-between;
 }
 .price-name {
-  font-family: var(--font-jetbrains), monospace;
   font-size: 13px;
   color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 .price-amount {
+  font-family: var(--font-zilla), Georgia, serif;
   font-size: 32px;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 .price-amount .per {
+  font-family: var(--font-jetbrains), monospace;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-faint);
@@ -676,8 +684,8 @@ section {
   border-radius: var(--radius);
   padding: 12px 14px;
   color: var(--text);
-  font-family: var(--font-hanken), sans-serif;
-  font-size: 14.5px;
+  font-family: var(--font-jetbrains), monospace;
+  font-size: 14px;
 }
 .waitlist-form input:focus {
   outline: 2px solid var(--accent);
@@ -688,14 +696,14 @@ section {
   border-radius: var(--radius);
   padding: 0 18px;
   background: var(--accent);
-  color: var(--accent-ink);
+  color: var(--ink-panel-text);
   font-weight: 600;
   font-size: 14.5px;
   cursor: pointer;
   white-space: nowrap;
 }
 .waitlist-form button:hover {
-  background: #f7c565;
+  background: var(--accent-hover);
 }
 .form-msg {
   margin-top: 10px;
@@ -708,13 +716,8 @@ section {
 footer {
   padding-block: 36px 56px;
   border-top: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   color: var(--text-faint);
   font-size: 13.5px;
-  flex-wrap: wrap;
-  gap: 16px;
 }
 footer a {
   text-decoration: none;
@@ -723,9 +726,46 @@ footer a {
 footer a:hover {
   color: var(--text);
 }
+.footer-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
 .footer-links {
   display: flex;
   gap: 20px;
+}
+.credits {
+  margin-top: 22px;
+}
+.credits summary {
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: 12.5px;
+}
+.credits summary:hover {
+  color: var(--text);
+}
+.credits p {
+  max-width: 60ch;
+  margin: 12px 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.credits ul {
+  margin: 0;
+  padding-left: 18px;
+  columns: 2;
+  column-gap: 32px;
+  font-size: 12px;
+  line-height: 1.8;
+}
+@media (max-width: 620px) {
+  .credits ul {
+    columns: 1;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

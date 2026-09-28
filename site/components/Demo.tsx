@@ -30,9 +30,9 @@ export default function Demo() {
             person_001/
           </div>
           <div className="order-row" style={{ ["--ring" as string]: "var(--cluster-a)" }}>
-            <div className="photo"></div>
-            <div className="photo"></div>
-            <div className="photo"></div>
+            <div className="photo"><img src="/demo/watson_04.jpg" alt="Emma Watson" /></div>
+            <div className="photo"><img src="/demo/watson_06.jpg" alt="Emma Watson" /></div>
+            <div className="photo"><img src="/demo/watson_07.jpg" alt="Emma Watson" /></div>
           </div>
         </div>
         <div>
@@ -41,9 +41,9 @@ export default function Demo() {
             person_002/
           </div>
           <div className="order-row" style={{ ["--ring" as string]: "var(--cluster-b)" }}>
-            <div className="photo"></div>
-            <div className="photo"></div>
-            <div className="photo"></div>
+            <div className="photo"><img src="/demo/hiddleston_09.jpg" alt="Tom Hiddleston" /></div>
+            <div className="photo"><img src="/demo/hiddleston_10.jpg" alt="Tom Hiddleston" /></div>
+            <div className="photo"><img src="/demo/hiddleston_11.jpg" alt="Tom Hiddleston" /></div>
           </div>
         </div>
         <div>
@@ -52,9 +52,9 @@ export default function Demo() {
             person_003/
           </div>
           <div className="order-row" style={{ ["--ring" as string]: "var(--cluster-c)" }}>
-            <div className="photo"></div>
-            <div className="photo"></div>
-            <div className="photo"></div>
+            <div className="photo"><img src="/demo/evans_07.jpg" alt="Chris Evans" /></div>
+            <div className="photo"><img src="/demo/evans_09.jpg" alt="Chris Evans" /></div>
+            <div className="photo"><img src="/demo/evans_04.jpg" alt="Chris Evans" /></div>
           </div>
         </div>
       </div>

@@ -15,7 +15,7 @@ export default function Pricing() {
           </div>
         </div>
         <ul className="price-features">
-          <li>find, group, and dedupe</li>
+          <li>find one person (or several at once), group, and dedupe</li>
           <li>macOS &amp; Linux, single binary</li>
           <li>Runs entirely offline, always</li>
           <li>Free updates</li>
