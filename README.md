@@ -119,6 +119,12 @@ cp ~/some-clear-photos-of-them/*.jpg references/
 `references/` is gitignored: it holds real photos of a real person and
 should never end up in version control.
 
+Looking for more than one person? Put each person's photos in their own
+subfolder instead - `references/mom/*.jpg`, `references/dad/*.jpg` - and
+`find` matches an archive against all of them in a single scan, copying
+results into `matched/mom/`, `matched/dad/`, etc., instead of one full
+re-scan per person.
+
 <details>
 <summary><strong>Pro tips for good reference photos</strong> (click to expand)</summary>
 
@@ -304,7 +310,7 @@ picture. This is just the map:
 | Command | What it does |
 |---|---|
 | `facematch build-references` | Build `reference_embeddings.npz` from the photos/videos in `references/`. |
-| `facematch find` | Scan your archive and copy out matches (deduping automatically when done). Supports `--background`, `find status`, and `find restart` for job control. |
+| `facematch find` | Scan your archive and copy out matches (deduping automatically when done). Matches against several people in one pass if `references/` has per-person subfolders. Supports `--background`, `find status`, and `find restart` for job control. |
 | `facematch group` | Cluster every face in your archive by person, no references needed (deduping each person folder automatically when done). Supports the same `--background` / `status` / `restart` job control as `find`. |
 | `facematch dedupe` | Collapse duplicate files (exact + perceptual hash) in any folder into one canonical copy each — standalone, or (via `--per-subfolder`) the automatic post-processing step behind `find`/`group`. |
 | `facematch backfill-videos` | Copy full video files for matches that only have a saved thumbnail, without re-running detection. |
