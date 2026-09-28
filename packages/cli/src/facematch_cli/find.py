@@ -62,13 +62,31 @@ from . import paths, runstate
 from .config import get_default_sources
 
 
-def load_reference_embeddings() -> np.ndarray:
+def load_reference_embeddings() -> dict[str, np.ndarray]:
+    """Returns person-label -> stacked [Ni, 512] reference embeddings.
+
+    Classic (non-named) reference sets - and any pre-existing
+    reference_embeddings.npz written before multi-person support existed,
+    which has no "persons" array at all - come back as {"": embeddings}.
+    Named mode (references/<person>/ subfolders) comes back with one entry
+    per person. See build_references.py and facematch_core.worker.
+    """
     path = paths.reference_embeddings_path()
     if not path.exists():
         print("ERROR: reference_embeddings.npz not found. Run `facematch build-references` first.")
         sys.exit(1)
     data = np.load(path)
-    return data["embeddings"]
+    embeddings = data["embeddings"]
+    persons = data["persons"] if "persons" in data.files else np.array([""] * len(embeddings))
+
+    grouped: dict[str, list] = {}
+    for emb, person in zip(embeddings, persons):
+        grouped.setdefault(str(person), []).append(emb)
+    return {name: np.stack(embs).astype(np.float32) for name, embs in grouped.items()}
+
+
+def is_named_mode(refs: dict[str, np.ndarray]) -> bool:
+    return any(person != "" for person in refs)
 
 
 def _status_to_kind(status: str) -> str:
@@ -124,6 +142,13 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
           facematch find status --watch                      keep watching a background run until it finishes
           facematch find restart                              wipe checkpoint + match log, then run again fresh
           facematch find --no-dedupe                          skip the automatic post-scan dedupe pass
+
+        want to find several people in one pass instead of one at a time? put each
+        person's photos in their own references/<person>/ subfolder (see
+        `facematch build-references --help`) - find matches an archive against all
+        of them in a single scan, copying results into matched/<person>/ instead of
+        matched/ (a file with more than one of them in it lands in every relevant
+        person's folder, same as `facematch group`).
 
         by default, a run RESUMES: anything already recorded in checkpoint.sqlite3
         is skipped instantly. use `facematch find restart` when you want to
@@ -266,8 +291,14 @@ def run_scan(args: argparse.Namespace) -> None:
     scratch_root.mkdir(parents=True, exist_ok=True)
 
     refs = load_reference_embeddings()
+    named = is_named_mode(refs)
     checkpoint = Checkpoint(checkpoint_path)
-    log(f"Loaded {refs.shape[0]} reference embeddings. Threshold={args.threshold}. Workers={args.workers}")
+    if named:
+        breakdown = ", ".join(f"{person} ({refs[person].shape[0]})" for person in refs)
+        log(f"Loaded references for {len(refs)} people: {breakdown}. "
+            f"Threshold={args.threshold}. Workers={args.workers}")
+    else:
+        log(f"Loaded {refs[''].shape[0]} reference embeddings. Threshold={args.threshold}. Workers={args.workers}")
     log(f"Checkpoint: {len(checkpoint)} items already recorded in {checkpoint_path}")
 
     tracker = ProgressTracker(on_update=on_update)
@@ -300,7 +331,7 @@ def run_scan(args: argparse.Namespace) -> None:
                 key = result["key"]
                 tracker.set_current_source(result["display_name"])
 
-                if status == "matched":
+                if status == "matched" and not named:
                     detail = {
                         "type": result.get("kind", "image"),
                         "name": Path(result["dest_path"]).name,
@@ -317,6 +348,22 @@ def run_scan(args: argparse.Namespace) -> None:
                     checkpoint.record(key, "matched", result["score"], {
                         "dest_path": result["dest_path"],
                         "timestamps": result.get("timestamps"),
+                    })
+                elif status == "matched" and named:
+                    matches = result["matches"]
+                    detail = {
+                        "type": result.get("kind", "image"),
+                        "source": result["display_name"],
+                        "thumb": result.get("thumb", ""),
+                        "persons": {p: round(m["score"], 3) for p, m in matches.items()},
+                    }
+                    tracker.record_processed("matched", detail)
+                    for person, m in matches.items():
+                        csv_writer.writerow([
+                            result["display_name"], "matched", f"{m['score']:.4f}", m["dest_path"],
+                        ])
+                    checkpoint.record(key, "matched", max(m["score"] for m in matches.values()), {
+                        "matches": matches,
                     })
                 elif status == "error":
                     tracker.record_processed("errored")
@@ -354,9 +401,18 @@ def run_scan(args: argparse.Namespace) -> None:
 
     if not args.no_dedupe:
         from . import dedupe as dedupe_module
-        log("Deduplicating matched/ ...")
         try:
-            dedupe_module.dedupe_directory(matched_dir, log=log)
+            if named:
+                log(f"Deduplicating each folder under {matched_dir} independently ...")
+                subdirs = sorted(
+                    p for p in matched_dir.iterdir()
+                    if p.is_dir() and p.name not in dedupe_module._RESERVED_SUBDIR_NAMES
+                )
+                for sub in subdirs:
+                    dedupe_module.dedupe_directory(sub, log=log)
+            else:
+                log("Deduplicating matched/ ...")
+                dedupe_module.dedupe_directory(matched_dir, log=log)
         except Exception as e:
             log(f"[warn] automatic dedupe failed (matched/ is untouched, your results are fine): {e}")
 
